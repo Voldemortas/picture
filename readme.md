@@ -38,7 +38,7 @@ or other means if you're doing it serverside. And them simply
 ```ts
 //import Picture, prepare context
 const imageData = context.getImageData(0, 0, width, height)
-const picture = Picture.from(imageData)
+let picture = Picture.from(imageData)
 ```
 
 ---
@@ -161,6 +161,60 @@ picture.groupColors([1, 2, 1])
 
 ![](example/grouped.png)\
 left - original, right - firsly monochromized, then grouped with `[1, 1, 1]`
+
+#### Convolve
+
+You can convolve the picture using custom or built in [kernels](#Kernel).
+
+```ts
+new Array(40).forEach(() => {
+  picture = picture.convolve([[0, 0, 0], [1, 0, 0], [0, 0, 0]])
+})
+```
+
+![](example/left.png)\
+what happens if you run the code above
+
+#### findCoordsToConvolveKernel
+
+A _static_ method that finds which indices are needed to be used with the Kernel
+as the image is rectangular yet pixels are encoded linearly.
+
+```
+0 1 2
+3 4 5
+6 7 8
+```
+
+The _direct_ neighbours of the pixel `4` are `[1, 3, 5, 7]` and the pixel `2`
+only has 2 neighbours: `[1, 5]`.
+
+```ts
+const imageWidth = 3
+const imageHeight = 3
+//the pixel id is 2 as from the above
+const pixelX = 2
+const pixelY = 0
+const kernelWidth = 3
+const kernelHeight = 3
+const imagePixelIds = Picture.findCoordsToConvolveKernel(
+  [imageWidth, imageHeight],
+  [pixelX, pixelY],
+  [kernelWidth, kernelHeight],
+) //[undefined, 5, 4, undefined, 2, 1, undefined, undefined, undefined]
+//undefined - index does not exist
+```
+
+```
+0 ➀ ❷  
+3 ➃ ➄  
+6 7 8
+```
+
+As the pixel was ❷, the pixels in question needed for convulation are shown in
+black circles.
+
+---
 
 ### Pixel
 

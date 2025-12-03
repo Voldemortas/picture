@@ -1,6 +1,6 @@
 import { expect } from 'jsr:@std/expect@^1.0.17'
 import { describe, it } from 'jsr:/@std/testing@^1.0.16/bdd'
-import Picture, { Pixel } from '~lib/Picture.ts'
+import Picture, { Kernel, Pixel } from '~lib/Picture.ts'
 
 const WIDTH = 3
 const HEIGHT = 2
@@ -127,6 +127,62 @@ describe('Picture', () => {
       })
     })
   })
+  describe('convolve', () => {
+    const data = [
+      20,
+      20,
+      20,
+      20,
+      110,
+      20,
+      20,
+      20,
+      20,
+    ].flatMap((x) => [x, x, x, 0xFF])
+
+    const data2 = [
+      20,
+      20,
+      20,
+      20,
+      30,
+      20,
+      20,
+      20,
+      20,
+    ].flatMap((x) => [x, x, x, 0xFF])
+
+    const picture = new Picture(3, 3, new Uint8ClampedArray(data))
+    expect([...picture.convolve(Kernel.identity).data.values()]).toEqual(data)
+    expect([...picture.convolve(Kernel.boxBlur).data.values()]).toEqual(data2)
+  })
+  describe('findCoordsToConvolveKernel', () => {
+    /**
+     * MAP
+     * 0 1 2
+     * 3 4 5
+     * 6 7 8
+     */
+    const expectedCoordinates: (number | undefined)[][] = [
+      [4, 3, undefined, 1, 0, undefined, undefined, undefined, undefined],
+      [5, 4, 3, 2, 1, 0, undefined, undefined, undefined],
+      [undefined, 5, 4, undefined, 2, 1, undefined, undefined, undefined],
+      [7, 6, undefined, 4, 3, undefined, 1, 0, undefined],
+      [8, 7, 6, 5, 4, 3, 2, 1, 0],
+      [undefined, 8, 7, undefined, 5, 4, undefined, 2, 1],
+      [undefined, undefined, undefined, 7, 6, undefined, 4, 3, undefined],
+      [undefined, undefined, undefined, 8, 7, 6, 5, 4, 3],
+      [undefined, undefined, undefined, undefined, 8, 7, undefined, 5, 4],
+    ]
+    for (let i = 0; i < 3; i++) {
+      for (let j = 0; j < 3; j++) {
+        it(`tests coordinate(${j}, ${i})`, () => {
+          expect(Picture.findCoordsToConvolveKernel([3, 3], [j, i], [3, 3]))
+            .toStrictEqual(expectedCoordinates[i * 3 + j])
+        })
+      }
+    }
+  })
 })
 describe('Pixel', () => {
   it('binarizes pixel', () => {
@@ -143,5 +199,36 @@ describe('Pixel', () => {
     const monochromize = Pixel.monochromize([1 / 3, 1 / 3, 1 / 3])
     expect(monochromize([60, 120, 180])).toStrictEqual([120, 120, 120, 255])
     expect(monochromize([60, 120, 180, 3])).toStrictEqual([120, 120, 120, 3])
+  })
+})
+describe('Kernel', () => {
+  type goodKey = keyof typeof Kernel
+  const kernelValues: Record<goodKey, number> = {
+    identity: 1,
+    boxBlur: 1,
+    ridge1: 0,
+    ridge2: 0,
+    gausianBlur3: 1,
+    gausianBlur5: 1,
+    unsharpen: 1,
+    top: 0,
+    bottom: 0,
+    left: 0,
+    right: 0,
+    topLeft: 0,
+    topRight: 0,
+    bottomLeft: 0,
+    bottomRight: 0,
+  }
+  //@ts-ignore key: goodKey
+  Object.keys(Kernel).forEach((key: goodKey) => {
+    it(`checks if Kernel.${key} add up to ${kernelValues[key]}`, () => {
+      expect(
+        Kernel[key].flat().reduce(
+          (acc, cur) => acc + cur,
+          0,
+        ),
+      ).toBeCloseTo(kernelValues[key])
+    })
   })
 })

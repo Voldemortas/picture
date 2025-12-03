@@ -239,6 +239,24 @@ export default class Picture {
   }
 
   /**
+   * Convolves the image with given kernel
+   * @param {number[][]} kernel
+   * @param {boolean=} keepEdges - whether to update image edges; turns black otherwise
+   * @returns {Picture} convolved Picture
+   * @example
+   * ```
+   * let picture: Picture
+   * //image is unchaged
+   * const sameImage = picture.convolve(Kernels.identy)
+   * //image appears if it has been dragged down by 1 pixel
+   * const slidenDown = picture.convolve([[0, 0, 0], [0, 0, 0], [0, 1, 0]])
+   * ```
+   */
+  public convolve(kernel: number[][], keepEdges = true): Picture {
+    return Picture.convolve(this, kernel, keepEdges)
+  }
+
+  /**
    * Monochromizes the image - makes all the RGB channels have the same value (thus everything is from white, to gray, to black)
    * @param {Picture} image
    * @param {[number, number, number]=} rgb - RGB array, all vallues should add up to 1
@@ -327,7 +345,7 @@ export default class Picture {
     for (let i = 1; i < colorSpaceRatios.length + 1; i++) {
       ranges.push(
         ranges[i - 1] +
-          (MAX_PIXEL + 1) / ratiosSum * colorSpaceRatios[i - 1],
+        (MAX_PIXEL + 1) / ratiosSum * colorSpaceRatios[i - 1],
       )
     }
     ranges[0] = 0
@@ -395,6 +413,110 @@ export default class Picture {
       image.height,
       new Uint8ClampedArray(data),
     )
+  }
+
+  /**
+   * Convolves the image with given kernel
+   * @param {Picture} image
+   * @param {number[][]} kernel
+   * @param {boolean=} keepEdges - whether to update image edges; turns black otherwise
+   * @returns {Picture} convolved Picture
+   * @example
+   * ```
+   * let picture: Picture
+   * //image is unchaged
+   * const sameImage = Picture.convolve(picture, Kernels.identy)
+   * //image appears if it has been dragged down by 1 pixel
+   * const slidenDown = Picture.convolve(picture, [[0, 0, 0], [0, 0, 0], [0, 1, 0]])
+   * ```
+   */
+  public static convolve(
+    image: Picture,
+    kernel: number[][],
+    keepEdges = true,
+  ): Picture {
+    const kernelWidth = kernel[0].length
+    if (kernelWidth % 2 === 0) {
+      throw new Error('Kernel is expected to have odd length')
+    }
+    const kernerHeight = kernel.length
+    if (kernerHeight % 2 === 0) {
+      throw new Error('Kernel is expected to have odd height')
+    }
+    const flattenKernel = kernel.flat()
+    const data = new Uint8ClampedArray(image.data)
+    let pixel = 0
+    for (let y = 0; y < image.height; y++) {
+      for (let x = 0; x < image.width; x++) {
+        const coords = Picture.findCoordsToConvolveKernel(
+          [image.width, image.height],
+          [x, y],
+          [kernelWidth, kernerHeight],
+        )
+        if (keepEdges && coords.some((x) => x === undefined)) {
+          pixel++
+          continue
+        }
+        const summedPixel = coords.reduce(
+          (acc: [number, number, number], cur, i) => {
+            if (cur === undefined) {
+              return acc
+            }
+            acc[0] += image.data[cur * CHANNELS + 0] * flattenKernel[i]
+            acc[1] += image.data[cur * CHANNELS + 1] * flattenKernel[i]
+            acc[2] += image.data[cur * CHANNELS + 2] * flattenKernel[i]
+            return acc
+          },
+          [0, 0, 0],
+        )
+        data.set([...summedPixel, DEFAULT_ALPHA], pixel * CHANNELS)
+        pixel++
+      }
+    }
+    return new Picture(image.width, image.height, data)
+  }
+
+  /**
+   * Helper function to find which linear coordinates (indices) of the picture correspond to which kernel coordinates (indices).
+   *
+   * @param {[number, number]} - [imageWidth, imageHeight]
+   * @param {[number, number]} - [x, y] of the pixel
+   * @param {[number, number]} - [kernelWidth, kernerHeight]
+   * @returns {(number|undefined)[]} response's cell is `undefined` if the supposed kernel's match is out of image's bounds
+   */
+  public static findCoordsToConvolveKernel(
+    [imageWidth, imageHeight]: [number, number],
+    [x, y]: [number, number],
+    [kernelWidth, kernerHeight]: [number, number],
+  ): (number | undefined)[] {
+    const answer: (number | undefined)[] = new Array(kernelWidth * kernerHeight)
+    let kernelId = kernelWidth * kernerHeight
+    let distanceToCenterX
+    let distanceToCenterY = -Math.floor(kernerHeight / 2)
+    for (let j = 0; j < kernerHeight; j++) {
+      distanceToCenterX = -Math.floor(kernelWidth / 2)
+      if (distanceToCenterY + y < 0 || distanceToCenterY + y >= imageHeight) {
+        for (let i = 0; i < kernelWidth; i++) {
+          answer[--kernelId] = undefined
+        }
+        distanceToCenterY++
+        continue
+      }
+      for (let i = 0; i < kernelWidth; i++) {
+        if (
+          distanceToCenterX + x < 0 ||
+          distanceToCenterX + x >= imageWidth
+        ) {
+          answer[--kernelId] = undefined
+        } else {
+          answer[--kernelId] = (distanceToCenterX + x) +
+            imageWidth * (distanceToCenterY + y)
+        }
+        distanceToCenterX++
+      }
+      distanceToCenterY++
+    }
+    return answer
   }
 }
 
@@ -502,7 +624,7 @@ export class Pixel {
     for (let i = 1; i < colorSpaceRatios.length + 1; i++) {
       ranges.push(
         ranges[i - 1] +
-          (MAX_PIXEL + 1) / ratiosSum * colorSpaceRatios[i - 1],
+        (MAX_PIXEL + 1) / ratiosSum * colorSpaceRatios[i - 1],
       )
     }
     ranges[0] = 0
@@ -553,7 +675,49 @@ export type PixelCallback = (
 export type rgbaArray = [number, number, number, number]
 /**
  * [number, number, number, number?] - resembles rgb channels with optional alpha
- * @typedef {rgbaArray} rgbaArray
+ * @typedef {optionalAlphaArray} optionalAlphaArray
  * @property {[number, number, number, number?]}
  */
 export type optionalAlphaArray = [number, number, number, number?]
+
+/**
+ * Kernels for convulutions
+ * https://en.wikipedia.org/wiki/Kernel_(image_processing)
+ */
+export const Kernel: Record<string, number[][]> = {
+  identity: [[0, 0, 0], [0, 1, 0], [0, 0, 0]],
+  boxBlur: [
+    new Array(3).fill(1 / 9),
+    new Array(3).fill(1 / 9),
+    new Array(3).fill(1 / 9),
+  ] as number[][],
+  ridge1: [[0, -1, 0], [-1, 4, -1], [0, -1, 0]],
+  ridge2: [[-1, -1, -1], [-1, 8, -1], [-1, -1, -1]],
+  gausianBlur3: [
+    [1 / 16, 2 / 16, 1 / 16],
+    [2 / 16, 4 / 16, 2 / 16],
+    [1 / 16, 2 / 16, 1 / 16],
+  ],
+  gausianBlur5: [
+    [1 / 256, 4 / 256, 6 / 256, 4 / 256, 1 / 256],
+    [4 / 256, 16 / 256, 24 / 256, 16 / 256, 4 / 256],
+    [6 / 256, 24 / 256, 36 / 256, 24 / 256, 6 / 256],
+    [4 / 256, 16 / 256, 24 / 256, 16 / 256, 4 / 256],
+    [1 / 256, 4 / 256, 6 / 256, 4 / 256, 1 / 256],
+  ],
+  unsharpen: [
+    [1 / 256, 4 / 256, 6 / 256, 4 / 256, 1 / 256],
+    [4 / 256, 16 / 256, 24 / 256, 16 / 256, 4 / 256],
+    [6 / 256, 24 / 256, -476 / 256, 24 / 256, 6 / 256],
+    [4 / 256, 16 / 256, 24 / 256, 16 / 256, 4 / 256],
+    [1 / 256, 4 / 256, 6 / 256, 4 / 256, 1 / 256],
+  ].map((x) => x.map((y) => -y)),
+  top: [[1, 2, 1], [0, 0, 0], [-1, -2, -1]],
+  bottom: [[-1, -2, -1], [0, 0, 0], [1, 2, 1]],
+  left: [[1, 0, -1], [2, 0, -2], [1, 0, -1]],
+  right: [[-1, 0, 1], [-2, 0, 2], [1, 0, -1]],
+  topLeft: [[2, 1, 0], [1, 0, -1], [0, -1, -2]],
+  topRight: [[0, 1, 2], [-1, 0, 1], [-2, -1, 0]],
+  bottomLeft: [[0, -1, -2], [1, 0, -1], [2, 1, 0]],
+  bottomRight: [[-2, -1, 0], [-1, 0, 1], [0, 1, 2]],
+}

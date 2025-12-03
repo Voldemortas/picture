@@ -79,10 +79,17 @@
           style='display: block; height: 66px; width: 300px; font-family: "Courier New", Courier, monospace; font-size: 13px'
         >[1, 2, 1]</textarea>
       </div>
+      <div class="block">
+        <button id="convolve">Convolve, preserve edges</button>
+        <button id="convolve2">Convolve, update edges</button><textarea
+          id="convolveArea"
+          style='display: block; height: 66px; width: 300px; font-family: "Courier New", Courier, monospace; font-size: 13px'
+        >Kernel.unsharpen</textarea>
+      </div>
     </div>
 
     <script type="module">
-      const { default: Picture, Pixel } = await importPicture('')
+      const { default: Picture, Pixel, Kernel } = await importPicture()
       const img = document.getElementById('image')
       const canvas = document.getElementById('canvas')
       const ctx = canvas.getContext('2d')
@@ -168,6 +175,34 @@
         () => {
           drawImage(
             getImage().binarizeColors(),
+          )
+        },
+      )
+      document.getElementById('convolve').addEventListener(
+        'click',
+        () => {
+          drawImage(
+            Picture.convolve(
+              getImage(),
+              eval(
+                document.getElementById('convolveArea').value,
+              ),
+              true,
+            ),
+          )
+        },
+      )
+      document.getElementById('convolve2').addEventListener(
+        'click',
+        () => {
+          drawImage(
+            Picture.convolve(
+              getImage(),
+              eval(
+                document.getElementById('convolveArea').value,
+              ),
+              false,
+            ),
           )
         },
       )
