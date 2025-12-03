@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Imager Example</title>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <style>
+      .colorName {
+        display: inline-block;
+        min-width: 50px;
+      }
+      .block {
+        display: inline-block;
+        border: brown dashed 1px;
+        margin: 2px;
+      }
+    </style>
+  </head>
+  <body>
+    <div style="display: flex">
+      <div>
+        <img
+          src="https://picsum.photos/400/400"
+          crossorigin="anonymous"
+          id="image"
+        />
+      </div>&nbsp;
+      <div>
+        <canvas
+          width="400"
+          height="400"
+          id="canvas"
+        ></canvas>
+      </div>
+    </div>
+    <br />
+    <div style="display: flex">
+      <div class="block">
+        <button id="reset">Reset image</button>
+      </div>
+      <div class="block">
+        <button id="grayscale">Grayscale</button>
+        <textarea
+          id="grayscaleArea"
+          style='display: block; height: 66px; width: 300px; font-family: "Courier New", Courier, monospace; font-size: 13px'
+        >[0.2125, 0.7154, 0.0721]</textarea>
+      </div>
+      <div class="block">
+        <button id="manipulate">Manipulate channels</button>
+        <textarea
+          id="manipulateArea"
+          style='display: block; height: 66px; width: 300px; font-family: "Courier New", Courier, monospace; font-size: 13px'
+        >([r, g, b]) => [1/4 * r + 127, g, b * 0.9]</textarea>
+      </div>
+      <div class="block">
+        <button id="binary">Reset+grayscale+binarise</button><br />
+        <button id="binary2">Binarise current image</button><br />
+      </div>
+      <div class="block">
+        <button id="group">Group colours</button><textarea
+          id="groupArea"
+          style='display: block; height: 66px; width: 300px; font-family: "Courier New", Courier, monospace; font-size: 13px'
+        >[1, 2, 1]</textarea>
+      </div>
+    </div>
+
+    <script type="module">
+      import Picture, {
+        Pixel,
+      } from 'https://esm.sh/jsr/@voldemortas/picture'
+      const img = document.getElementById('image')
+      const canvas = document.getElementById('canvas')
+      const ctx = canvas.getContext('2d')
+
+      await initImage()
+
+      async function initImage() {
+        return new Promise((resolve) => {
+          img.onload = () => {
+            ctx?.drawImage(img, 0, 0)
+            resolve()
+          }
+        })
+      }
+
+      function getImage(reset = false) {
+        if (reset) { ctx.drawImage(img, 0, 0) }
+        const imageData = ctx.getImageData(
+          0,
+          0,
+          img.width,
+          img.height,
+        )
+        return Picture.from(imageData)
+      }
+
+      function drawImage(i) {
+        ctx.putImageData(new ImageData(i.data, i.width), 0, 0)
+      }
+
+      document.getElementById('reset').addEventListener(
+        'click',
+        () => {
+          drawImage(getImage(true))
+        },
+      )
+      document.getElementById('grayscale').addEventListener(
+        'click',
+        () => {
+          drawImage(
+            getImage().monochromize(
+              eval(
+                document.getElementById('grayscaleArea').value,
+              ),
+            ),
+          )
+        },
+      )
+      document.getElementById('manipulate').addEventListener(
+        'click',
+        () => {
+          drawImage(
+            getImage().manipulateChannels(
+              eval(
+                document.getElementById('manipulateArea').value,
+              ),
+            ),
+          )
+        },
+      )
+      document.getElementById('group').addEventListener(
+        'click',
+        () => {
+          drawImage(
+            getImage().groupColors(
+              eval(
+                document.getElementById('groupArea').value,
+              ),
+            ),
+          )
+        },
+      )
+      document.getElementById('binary').addEventListener(
+        'click',
+        () => {
+          drawImage(
+            getImage(true).monochromize().binarizeColors(),
+          )
+        },
+      )
+      document.getElementById('binary2').addEventListener(
+        'click',
+        () => {
+          drawImage(
+            getImage().binarizeColors(),
+          )
+        },
+      )
+    </script>
+  </body>
+</html>

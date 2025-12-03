@@ -1,0 +1,16 @@
+{
+  "name": "@voldemortas/picture",
+  "exports": "./lib/Picture.ts",
+  "version": "0.1.0",
+  "fmt": {
+    "useTabs": false,
+    "semiColons": false,
+    "singleQuote": true,
+    "trailingCommas": "onlyMultiLine",
+    "useBraces": "always"
+  },
+  "imports": {
+    "~lib/": "./lib/"
+  },
+  "license": "MIT"
+}
