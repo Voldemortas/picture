@@ -74,6 +74,20 @@ describe('Picture', () => {
     it('converts Picture.toNoAlphaObject() properly', () => {
       expect(picture1.toNoAlphaObject()).toEqual({ ...IMAGE2, channels: 3 })
     })
+    it('throws when image Data missmatches width and height', () => {
+      expect(() => {
+        new Picture(WIDTH, HEIGHT, new Uint8ClampedArray(RGBA).subarray(0, RGBA.length - 1))
+      }).toThrow()
+      expect(() => {
+        new Picture(WIDTH, HEIGHT, new Uint8ClampedArray(RGB).subarray(0, RGB.length - 1))
+      }).toThrow()
+      expect(() => {
+        Picture.From({ width: WIDTH, height: HEIGHT, data: new Uint8ClampedArray(RGBA).subarray(0, RGBA.length - 1) })
+      }).toThrow()
+      expect(() => {
+        Picture.From({ width: WIDTH, height: HEIGHT, data: new Uint8ClampedArray(RGB).subarray(0, RGB.length - 1) })
+      }).toThrow()
+    })
   })
   describe('pixel manipulation', () => {
     it('monochromizes properly', () => {
@@ -155,6 +169,11 @@ describe('Picture', () => {
     const picture = new Picture(3, 3, new Uint8ClampedArray(data))
     expect([...picture.convolve(Kernel.identity).data.values()]).toEqual(data)
     expect([...picture.convolve(Kernel.boxBlur).data.values()]).toEqual(data2)
+  })
+  it('throws when kernel is not odd x odd', () => {
+    const picture = new Picture(WIDTH, HEIGHT, new Uint8ClampedArray(RGB))
+    expect(() => { picture.convolve([[1, 1], [1, 1], [1, 1]]) }).toThrow()
+    expect(() => { picture.convolve([[1, 1, 1], [1, 1, 1]]) }).toThrow()
   })
   describe('findCoordsToConvolveKernel', () => {
     /**

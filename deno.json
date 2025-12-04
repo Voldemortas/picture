@@ -1,7 +1,11 @@
 {
   "name": "@voldemortas/picture",
   "exports": "./lib/Picture.ts",
-  "version": "0.2.0",
+  "version": "0.2.1",
+  "tasks": {
+    "test": "deno test --coverage=cov_profile",
+    "server": "file-server ."
+  },
   "fmt": {
     "useTabs": false,
     "semiColons": false,

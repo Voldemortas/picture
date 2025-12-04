@@ -684,7 +684,24 @@ export type optionalAlphaArray = [number, number, number, number?]
  * Kernels for convulutions
  * https://en.wikipedia.org/wiki/Kernel_(image_processing)
  */
-export const Kernel: Record<string, number[][]> = {
+
+export const Kernel: {
+  identity: number[][],
+  boxBlur: number[][],
+  ridge1: number[][],
+  ridge2: number[][],
+  gausianBlur3: number[][],
+  gausianBlur5: number[][],
+  unsharpen: number[][],
+  top: number[][],
+  bottom: number[][],
+  left: number[][],
+  right: number[][],
+  topLeft: number[][],
+  topRight: number[][],
+  bottomLeft: number[][],
+  bottomRight: number[][],
+} = {
   identity: [[0, 0, 0], [0, 1, 0], [0, 0, 0]],
   boxBlur: [
     new Array(3).fill(1 / 9),
