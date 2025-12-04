@@ -19,14 +19,15 @@ bunx jsr add @voldemortas/picture
 
 And import with
 
-`import Picture, {Pixel} from "@voldemortas/picture";`\
+`import Picture, {Pixel, Kernel} from "@voldemortas/picture";`\
+or\
+`import Picture, {Pixel, Kernel} from "jsr:@voldemortas/picture";`\
 or if using browser:\
-`import Picture, {Pixel} from "https://esm.sh/jsr/@voldemortas/picture"`
+`import Picture, {Pixel, Kernel} from "https://esm.sh/jsr/@voldemortas/picture"`
 
 ## Usage
 
 You can check the functionalit by visiting
-https://raw.githack.com/Voldemortas/picture/master/example/example.html or
 https://raw.githack.com/Voldemortas/picture/master/example/index.html.
 
 ### Preparation

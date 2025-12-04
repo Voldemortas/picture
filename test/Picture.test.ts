@@ -1,6 +1,7 @@
-import { expect } from 'jsr:@std/expect@^1.0.17'
-import { describe, it } from 'jsr:/@std/testing@^1.0.16/bdd'
-import Picture, { Kernel, Pixel } from '~lib/Picture.ts'
+import { expect } from '@std/expect'
+import { describe, it } from '@std/testing/bdd'
+import Picture from '~lib/Picture.ts'
+import { Kernel } from '~lib/Kernel.ts'
 
 const WIDTH = 3
 const HEIGHT = 2
@@ -76,16 +77,32 @@ describe('Picture', () => {
     })
     it('throws when image Data missmatches width and height', () => {
       expect(() => {
-        new Picture(WIDTH, HEIGHT, new Uint8ClampedArray(RGBA).subarray(0, RGBA.length - 1))
+        new Picture(
+          WIDTH,
+          HEIGHT,
+          new Uint8ClampedArray(RGBA).subarray(0, RGBA.length - 1),
+        )
       }).toThrow()
       expect(() => {
-        new Picture(WIDTH, HEIGHT, new Uint8ClampedArray(RGB).subarray(0, RGB.length - 1))
+        new Picture(
+          WIDTH,
+          HEIGHT,
+          new Uint8ClampedArray(RGB).subarray(0, RGB.length - 1),
+        )
       }).toThrow()
       expect(() => {
-        Picture.From({ width: WIDTH, height: HEIGHT, data: new Uint8ClampedArray(RGBA).subarray(0, RGBA.length - 1) })
+        Picture.From({
+          width: WIDTH,
+          height: HEIGHT,
+          data: new Uint8ClampedArray(RGBA).subarray(0, RGBA.length - 1),
+        })
       }).toThrow()
       expect(() => {
-        Picture.From({ width: WIDTH, height: HEIGHT, data: new Uint8ClampedArray(RGB).subarray(0, RGB.length - 1) })
+        Picture.From({
+          width: WIDTH,
+          height: HEIGHT,
+          data: new Uint8ClampedArray(RGB).subarray(0, RGB.length - 1),
+        })
       }).toThrow()
     })
   })
@@ -172,8 +189,12 @@ describe('Picture', () => {
   })
   it('throws when kernel is not odd x odd', () => {
     const picture = new Picture(WIDTH, HEIGHT, new Uint8ClampedArray(RGB))
-    expect(() => { picture.convolve([[1, 1], [1, 1], [1, 1]]) }).toThrow()
-    expect(() => { picture.convolve([[1, 1, 1], [1, 1, 1]]) }).toThrow()
+    expect(() => {
+      picture.convolve([[1, 1], [1, 1], [1, 1]])
+    }).toThrow()
+    expect(() => {
+      picture.convolve([[1, 1, 1], [1, 1, 1]])
+    }).toThrow()
   })
   describe('findCoordsToConvolveKernel', () => {
     /**
@@ -201,53 +222,5 @@ describe('Picture', () => {
         })
       }
     }
-  })
-})
-describe('Pixel', () => {
-  it('binarizes pixel', () => {
-    const binarizeColors = Pixel.binarizeColors(127)
-    expect(binarizeColors([0, 127, 255])).toStrictEqual([0, 0, 255, 255])
-    expect(binarizeColors([0, 127, 255, 127])).toStrictEqual([0, 0, 255, 0])
-  })
-  it('groups pixel', () => {
-    const groupColors = Pixel.groupColors([1, 2, 1])
-    expect(groupColors([60, 120, 180])).toStrictEqual([0, 127, 127, 255])
-    expect(groupColors([60, 120, 180, 127])).toStrictEqual([0, 127, 127, 127])
-  })
-  it('monochromizes pixel', () => {
-    const monochromize = Pixel.monochromize([1 / 3, 1 / 3, 1 / 3])
-    expect(monochromize([60, 120, 180])).toStrictEqual([120, 120, 120, 255])
-    expect(monochromize([60, 120, 180, 3])).toStrictEqual([120, 120, 120, 3])
-  })
-})
-describe('Kernel', () => {
-  type goodKey = keyof typeof Kernel
-  const kernelValues: Record<goodKey, number> = {
-    identity: 1,
-    boxBlur: 1,
-    ridge1: 0,
-    ridge2: 0,
-    gausianBlur3: 1,
-    gausianBlur5: 1,
-    unsharpen: 1,
-    top: 0,
-    bottom: 0,
-    left: 0,
-    right: 0,
-    topLeft: 0,
-    topRight: 0,
-    bottomLeft: 0,
-    bottomRight: 0,
-  }
-  //@ts-ignore key: goodKey
-  Object.keys(Kernel).forEach((key: goodKey) => {
-    it(`checks if Kernel.${key} add up to ${kernelValues[key]}`, () => {
-      expect(
-        Kernel[key].flat().reduce(
-          (acc, cur) => acc + cur,
-          0,
-        ),
-      ).toBeCloseTo(kernelValues[key])
-    })
   })
 })

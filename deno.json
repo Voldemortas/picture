@@ -1,10 +1,11 @@
 {
   "name": "@voldemortas/picture",
-  "exports": "./lib/Picture.ts",
-  "version": "0.2.1",
+  "exports": "./lib/index.ts",
+  "version": "0.3.0",
   "tasks": {
     "test": "deno test --coverage=cov_profile",
-    "server": "file-server ."
+    "server": "file-server .",
+    "build": "deno bundle --outdir dist lib/index.ts"
   },
   "fmt": {
     "useTabs": false,
@@ -14,6 +15,8 @@
     "useBraces": "always"
   },
   "imports": {
+    "@std/expect": "jsr:@std/expect@^1.0.17",
+    "@std/testing": "jsr:@std/testing@^1.0.16",
     "~lib/": "./lib/"
   },
   "license": "MIT"

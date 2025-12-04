@@ -15,21 +15,15 @@
         margin: 2px;
       }
     </style>
-    <script
-      src="https://unpkg.com/typescript@latest/lib/typescript.js"
-    ></script>
     <script>
       let exports = {}
-      async function importPicture() {
-        const file = await (await fetch('../lib/Picture.ts')).text()
-        const blobUrl = URL.createObjectURL(
-          new Blob([ts.transpile(file)], {
-            type: 'application/javascript',
-          }),
+      async function loadLibrary() {
+        const localhosts = ['localhost', '127.0.0.1', '0.0.0.0']
+        return await import(
+          localhosts.includes(window.location.hostname)
+            ? '../dist/index.js'
+            : 'https://esm.sh/jsr/@voldemortas/picture'
         )
-
-        await import(blobUrl)
-        return exports
       }
     </script>
   </head>
@@ -69,6 +63,8 @@
           style='display: block; height: 66px; width: 300px; font-family: "Courier New", Courier, monospace; font-size: 13px'
         >([r, g, b]) => [1/4 * r + 127, g, b * 0.9]</textarea>
       </div>
+    </div>
+    <div style="display: flex">
       <div class="block">
         <button id="binary">Reset+grayscale+binarise</button><br />
         <button id="binary2">Binarise current image</button><br />
@@ -89,7 +85,7 @@
     </div>
 
     <script type="module">
-      const { default: Picture, Pixel, Kernel } = await importPicture()
+      const { default: Picture, Pixel, Kernel } = await loadLibrary()
       const img = document.getElementById('image')
       const canvas = document.getElementById('canvas')
       const ctx = canvas.getContext('2d')
