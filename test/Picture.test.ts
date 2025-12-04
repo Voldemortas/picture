@@ -2,6 +2,7 @@ import { expect } from '@std/expect'
 import { describe, it } from '@std/testing/bdd'
 import Picture from '~lib/Picture.ts'
 import { Kernel } from '~lib/Kernel.ts'
+import { CHANNELS } from '~lib/common.ts'
 
 const WIDTH = 3
 const HEIGHT = 2
@@ -223,4 +224,176 @@ describe('Picture', () => {
       }
     }
   })
+  describe('resize', () => {
+    const imageData = new Uint8ClampedArray(
+      [1, 2, 3, 4, 5, 6, 7, 8, 9].flatMap(buildPixel),
+    )
+    const width = 3
+    const height = 3
+    const picture = new Picture(width, height, imageData)
+    it('changes nothing when offsets are 0 and new dimensions match current', () => {
+      const p = Picture.resize(picture, 0, 0, width, height)
+      expect(p.data).toEqual(
+        imageData,
+      )
+      expect(picture.resize(0, 0, width, height)).toEqual(p)
+    })
+    it('cuts image into a smaller one', () => {
+      const p1 = Picture.resize(picture, 1, 1, 1, 1)
+      const p2 = Picture.resize(picture, 0, 0, 1, 2)
+      const p3 = Picture.resize(picture, 1, 2, 2, 1)
+
+      expect(picture.resize(1, 1, 1, 1)).toEqual(p1)
+      expect(picture.resize(0, 0, 1, 2)).toEqual(p2)
+      expect(picture.resize(1, 2, 2, 1)).toEqual(p3)
+
+      expect(p1.width).toStrictEqual(1)
+      expect(p2.width).toStrictEqual(1)
+      expect(p3.width).toStrictEqual(2)
+
+      expect(p1.height).toStrictEqual(1)
+      expect(p2.height).toStrictEqual(2)
+      expect(p3.height).toStrictEqual(1)
+
+      expect(p1.data).toEqual(
+        new Uint8ClampedArray([5].flatMap(buildPixel)),
+      )
+      expect(p2.data).toEqual(
+        new Uint8ClampedArray([1, 4].flatMap(buildPixel)),
+      )
+      expect(p3.data).toEqual(
+        new Uint8ClampedArray([8, 9].flatMap(buildPixel)),
+      )
+    })
+    it('expands image with transparent pixels', () => {
+      const fiveZeroes: number[] = new Array(5).fill(0)
+
+      const p1 = Picture.resize(picture, -1, 0, 4, 3)
+      const p2 = Picture.resize(picture, 0, 0, 3, 4)
+      const p3 = Picture.resize(picture, -1, -1, 5, 5)
+
+      expect(picture.resize(-1, 0, 4, 3)).toEqual(p1)
+      expect(picture.resize(0, 0, 3, 4)).toEqual(p2)
+      expect(picture.resize(-1, -1, 5, 5)).toEqual(p3)
+
+      expect(p1.width).toStrictEqual(4)
+      expect(p2.width).toStrictEqual(3)
+      expect(p3.width).toStrictEqual(5)
+
+      expect(p1.height).toStrictEqual(3)
+      expect(p2.height).toStrictEqual(4)
+      expect(p3.height).toStrictEqual(5)
+
+      expect(p1.data).toEqual(
+        new Uint8ClampedArray(
+          [0, 1, 2, 3, 0, 4, 5, 6, 0, 7, 8, 9].flatMap(buildPixel),
+        ),
+      )
+      expect(p2.data).toEqual(
+        new Uint8ClampedArray(
+          [1, 2, 3, 4, 5, 6, 7, 8, 9, 0, 0, 0].flatMap(buildPixel),
+        ),
+      )
+      expect(p3.data).toEqual(
+        //<! -- deno-fmt-ignore-start -->
+        new Uint8ClampedArray([...fiveZeroes, 0, 1, 2, 3, 0, 0, 4, 5, 6, 0, 0, 7, 8, 9, 0, ...fiveZeroes].flatMap(buildPixel)),
+        //<! -- deno-fmt-ignore-end -->
+      )
+    })
+  })
+  describe('merge2', () => {
+    const empty = [0, 0, 0, 0]
+    const white = [255, 255, 255, 255]
+    const blueish = [0, 0, 255, 191]
+    const reddish = [255, 0, 0, 63]
+    const red = [255, 0, 0, 255]
+    const green = [0, 255, 0, 255]
+    const blue = [0, 0, 255, 255]
+    const black = [0, 0, 0, 255]
+    it('merges 2 pictures', () => {
+      const data = new Uint8ClampedArray([
+        ...new Array(7).fill(white).flat(),
+        ...blueish,
+        ...empty,
+      ])
+      const a = new Picture(3, 3, data)
+      const b = new Picture(
+        2,
+        2,
+        new Uint8ClampedArray([reddish, red, reddish, empty].flat()),
+      )
+      const c = Picture.merge2(a, b, 1, 1)
+      const d = a.merge2(b, 1, 1)
+      expect(c.width).toStrictEqual(a.width)
+      expect(c.height).toStrictEqual(a.height)
+      //<! -- deno-fmt-ignore-start -->
+      expect([...c.data]).toEqual([
+        255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255,
+        255, 255, 255, 255, 255, 192, 192, 255, 255, 0, 0, 255,
+        255, 255, 255, 255, 78, 0, 177, 207, 0, 0, 0, 0,
+      ])
+      //<! -- deno-fmt-ignore-end -->
+      expect(c).toEqual(d)
+    })
+    it('does nothing for when the second picture pixels is out of bounds', () => {
+      const data = new Uint8ClampedArray([...new Array(9).fill(white).flat()])
+      const a = new Picture(3, 3, data)
+      const b = new Picture(
+        2,
+        2,
+        new Uint8ClampedArray([...red, ...green, ...blue, ...black]),
+      )
+      const c1 = Picture.merge2(a, b, -1, -1)
+      const c2 = Picture.merge2(a, b, 2, -1)
+      const c3 = Picture.merge2(a, b, -1, 2)
+      const c4 = Picture.merge2(a, b, 2, 2)
+      const c5 = a
+        .merge2(b, -1, -1)
+        .merge2(b, 2, -1)
+        .merge2(b, -1, 2)
+        .merge2(b, 2, 2)
+
+      expect(c1.width).toStrictEqual(a.width)
+      expect(c2.width).toStrictEqual(a.width)
+      expect(c3.width).toStrictEqual(a.width)
+      expect(c4.width).toStrictEqual(a.width)
+      expect(c5.width).toStrictEqual(a.width)
+
+      expect(c1.height).toStrictEqual(a.height)
+      expect(c2.height).toStrictEqual(a.height)
+      expect(c3.height).toStrictEqual(a.height)
+      expect(c4.height).toStrictEqual(a.height)
+      expect(c5.height).toStrictEqual(a.height)
+
+      //<! -- deno-fmt-ignore-start -->
+      expect([...c1.data]).toEqual([
+        0, 0, 0, 255, 255, 255, 255, 255, 255, 255, 255, 255,
+        255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255,
+        255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255,
+      ])
+      //<! -- deno-fmt-ignore-start -->
+      expect([...c2.data]).toEqual([
+        255, 255, 255, 255, 255, 255, 255, 255, 0, 0, 255, 255,
+        255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255,
+        255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255,
+      ])
+      //<! -- deno-fmt-ignore-start -->
+      expect([...c3.data]).toEqual([
+        255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255,
+        255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255,
+        0, 255, 0, 255, 255, 255, 255, 255, 255, 255, 255, 255,
+      ])
+      //<! -- deno-fmt-ignore-start -->
+      expect([...c5.data]).toEqual([
+        0, 0, 0, 255, 255, 255, 255, 255, 0, 0, 255, 255,
+        255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255,
+        0, 255, 0, 255, 255, 255, 255, 255, 255, 0, 0, 255,
+      ])
+      //<! -- deno-fmt-ignore-end -->
+    })
+  })
 })
+
+function buildPixel(value: number) {
+  return new Array(CHANNELS).fill(value)
+}

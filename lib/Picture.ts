@@ -51,7 +51,7 @@ export default class Picture {
    * @param {Uint8ClampedArray} data - rgb(a) data, note that every pixel must be represent either by 3 or 4 channels (alpha is optional)
    * thus data.length must be `width * height * 3` or `width * height * 4`
    *
-   * Throws an error if the widh*height:data ratio missmatches
+   * Throws an error if the width*height:data ratio missmatches
    */
   constructor(
     width: number,
@@ -89,7 +89,7 @@ export default class Picture {
    *
    * @returns {Picture} - Picture
    *
-   * Throws an error if the widh*height:data ratio missmatches
+   * Throws an error if the width*height:data ratio missmatches
    */
   public static From(
     { width, height, data }: {
@@ -251,6 +251,60 @@ export default class Picture {
     return Picture.convolve(this, kernel, keepEdges)
   }
 
+  /**
+   * Method that increases/decreases image dimensions without applying any stretching
+   * @param {number} offsetX - start offset (negative results in new transparent pixels being added)
+   * @param {number} offsetY - start offset (negative results in new transparent pixels being added)
+   * @param {number} width - width of the new image
+   * @param {number} height - height of the new image
+   * @returns {Picture} new resized Picture
+   * @example
+   * ```
+   * let picture: Picture//size 3x2
+   * const nothingChanges = picture.resize(0, 0, 3, 2)//3x2
+   * const onlyCentralCol = picture.resize( 1, 0, 1, 2)//1x2
+   * const additionalRowBefore = picture.resize(0, -1, 3, 3)//3x3
+   * ```
+   */
+  public resize(
+    offsetX: number,
+    offsetY: number,
+    width: number,
+    height: number,
+  ): Picture {
+    return Picture.resize(this, offsetX, offsetY, width, height)
+  }
+
+  /**
+   * Merges another picture onto current picture, the dimensions of current picture are left unchanged
+   * @param {Picture} topLayer - picture on top
+   * @param {number=} offsetX - X coordinate of picture `a` where x=0 for picture `b` is
+   * @param {number=} offsetY - Y coordinate of picture `a` where y=0 for picture `b` is
+   * @returns {Picture}
+   * @example
+   * ```
+   * const white = [255, 255, 255, 255]
+   * const data = new Uint8ClampedArray(new Array(9).fill(white).flat())
+   * const reddish = [255, 0, 0, 63]
+   * const red = [255, 0, 0, 255]
+   * const a = new Picture(3, 3, data)
+   * const b = new Picture(2, 1, new Uint8ClampedArray(reddish, red).flat())
+   * //replaces center and centre-right pixels
+   * const c = a.merge2(b, 1, 1)
+   * //c.data is [
+   * //255, 255, 255, 255,  255, 255, 255, 255,  255, 255, 255, 255
+   * //255, 255, 255, 255,  255, 192, 192, 255,  255, 0, 0, 255
+   * //255, 255, 255, 255,  255, 255, 255, 255,  255, 255, 255, 255
+   * //]
+   * ```
+   */
+  public merge2(
+    topLayer: Picture,
+    offsetX = 0,
+    offsetY = 0,
+  ): Picture {
+    return Picture.merge2(this, topLayer, offsetX, offsetY)
+  }
   /**
    * Monochromizes the image - makes all the RGB channels have the same value (thus everything is from white, to gray, to black)
    * @param {Picture} image
@@ -512,5 +566,115 @@ export default class Picture {
       distanceToCenterY++
     }
     return answer
+  }
+
+  /**
+   * Method that increases/decreases image dimensions without applying any stretching
+   * @param {Picture} picture - picture to manipulate
+   * @param {number} offsetX - start offset (negative results in new transparent pixels being added)
+   * @param {number} offsetY - start offset (negative results in new transparent pixels being added)
+   * @param {number} width - width of the new image
+   * @param {number} height - height of the new image
+   * @returns {Picture} new resized Picture
+   * @example
+   * ```
+   * let picture: Picture//size 3x2
+   * const nothingChanges = Picture.resize(picture, 0, 0, 3, 2)//3x2
+   * const onlyCentralCol = Picture.resize(picture, 1, 0, 1, 2)//1x2
+   * const additionalRowBefore = Picture.resize(picture, 0, -1, 3, 3)//3x3
+   * ```
+   */
+  public static resize(
+    picture: Picture,
+    offsetX: number,
+    offsetY: number,
+    width: number,
+    height: number,
+  ): Picture {
+    const data = new Uint8ClampedArray(width * height * CHANNELS)
+    let pixel = 0
+    for (let i = offsetY; i < offsetY + height; i++) {
+      for (let j = offsetX; j < offsetX + width; j++) {
+        if (i >= 0 && i < picture.height && j >= 0 && j < picture.width) {
+          const pixelOfOriginal = i * picture.width + j
+          const originalPixel = picture.data.subarray(
+            CHANNELS * pixelOfOriginal,
+            CHANNELS * pixelOfOriginal + CHANNELS,
+          )
+          data.set(originalPixel, pixel * CHANNELS)
+        }
+        pixel++
+      }
+    }
+    return new Picture(width, height, data)
+  }
+
+  /**
+   * Merges picture `b` over picture `a`, the `a`'s dimensions are left unchanged
+   * @param {Picture} a - picture below
+   * @param {Picture} b - picture on top
+   * @param {number=} offsetX - X coordinate of picture `a` where x=0 for picture `b` is
+   * @param {number=} offsetY - Y coordinate of picture `a` where y=0 for picture `b` is
+   * @returns {Picture}
+   * @example
+   * ```
+   * const white = [255, 255, 255, 255]
+   * const data = new Uint8ClampedArray(new Array(9).fill(white).flat())
+   * const reddish = [255, 0, 0, 63]
+   * const red = [255, 0, 0, 255]
+   * const a = new Picture(3, 3, data)
+   * const b = new Picture(2, 1, new Uint8ClampedArray(reddish, red).flat())
+   * //replaces center and centre-right pixels
+   * const c = Picture.merge2(a, b, 1, 1)
+   * //c.data is [
+   * //255, 255, 255, 255,  255, 255, 255, 255,  255, 255, 255, 255
+   * //255, 255, 255, 255,  255, 192, 192, 255,  255, 0, 0, 255
+   * //255, 255, 255, 255,  255, 255, 255, 255,  255, 255, 255, 255
+   * //]
+   * ```
+   */
+  public static merge2(
+    a: Picture,
+    b: Picture,
+    offsetX = 0,
+    offsetY = 0,
+  ): Picture {
+    const { width, height } = a.toObject()
+    const data = new Uint8ClampedArray(a.data)
+    for (let i = offsetY, y = 0; y < b.height; i++, y++) {
+      if (i < 0 || i >= height) {
+        continue
+      }
+      for (let j = offsetX, x = 0; x < b.width; j++, x++) {
+        if (j < 0 || j >= width) {
+          continue
+        }
+        const bPixel = b.width * y + x
+        const pixelFromB = b.data.subarray(
+          bPixel * CHANNELS,
+          bPixel * CHANNELS + CHANNELS,
+        )
+        const aPixel = a.width * i + j
+        const pixelFromA = a.data.subarray(
+          aPixel * CHANNELS,
+          aPixel * CHANNELS + CHANNELS,
+        )
+        const alphaA = pixelFromA[CHANNELS - 1] / MAX_PIXEL
+        const alphaB = pixelFromB[CHANNELS - 1] / MAX_PIXEL
+        if (alphaA === 0 && alphaB === 0) {
+          continue
+        }
+        const pixel = new Array(CHANNELS)
+        const newAlpha = alphaA * (1 - alphaB) + alphaB
+        pixel[CHANNELS - 1] = newAlpha * MAX_PIXEL
+        for (let k = 0; k < NO_ALPHA_CHANNELS; k++) {
+          pixel[k] =
+            (pixelFromA[k] * alphaA * (1 - alphaB) + pixelFromB[k] * alphaB) /
+            newAlpha
+        }
+        data.set(pixel, aPixel * CHANNELS)
+      }
+    }
+    return new Picture(width, height, data)
   }
 }
