@@ -262,3 +262,84 @@ const pixel = [244, 127, 70]
 Pixel.groupColors([1, 1, 1])(pixel) //[255, 127, 0]
 Pixel.groupColors([1, 2, 1])(pixel) //[255, 127, 127]
 ```
+
+### Comparator
+
+Static class with methods to compare pixel (rgba channels)
+
+#### AlphaOption
+
+`AlphaOption` is an enum used to describe how alpha channels should be treated
+
+```ts
+export enum AlphaOption {
+  /** ignores alpha channels */
+  ignore = 'ignore',
+  /**
+   * cares about alpha channels and multiplies pixel's rgb channels by their transparancy
+   * for comparison sake
+   * [127, 255, 255, 127] gets treated as if it were [63, 127, 127, 255]
+   * applies to both pixels in comparison
+   */
+  multiply = 'multiply',
+  /**
+   * cares about alpha channels and multiplies pixel's rgb channels by their transparancy
+   * for comparison sake
+   * [127, 255, 255, 127] gets treated as if it were [63, 127, 127, 255]
+   * applies to the `b` pixel only
+   */
+  ignoreFirst = 'ignoreFirst',
+  /**
+   * cares about alpha channels, however, instead of multiplying rgb channels by their
+   * transparency, it just does simple `Math.abs(a[3] - b[3])`
+   */
+  compare = 'compare',
+}
+```
+
+#### comparePixels()
+
+```ts
+const P1 = [255, 0, 0, 63]
+const P2 = [0, 255, 0, 127]
+```
+
+```ts
+//255 of red + 255 of green + 0 of blue = 510; alpha channel is ignored
+Comparator.comparePixels(P1, P2, AlphaOption.ignore)
+//255 of red + 255 of green + 0 of blue = 510; alpha channel is ignored
+Comparator.comparePixels(P2, P1, AlphaOption.ignore)
+
+//255 of red + 127 of green + 0 of blue = 382; alpha channel of 2nd is ignored
+Comparator.comparePixels(P1, P2, AlphaOption.ignoreFirst)
+//63 of red + 255 of green + 0 of blue = 318; alpha channel of 2nd is ignored
+Comparator.comparePixels(P2, P1, AlphaOption.ignoreFirst)
+
+//255 of red + 255 of green + 0 of blue + 64 of alpha = 574
+Comparator.comparePixels(P1, P2, AlphaOption.compare)
+//255 of red + 255 of green + 0 of blue + 64 of alpha = 574
+Comparator.comparePixels(P2, P1, AlphaOption.compare)
+
+//63 of red + 127 of green = 190
+Comparator.comparePixels(P1, P2, AlphaOption.multiply)
+//63 of red + 127 of green = 190
+Comparator.comparePixels(P2, P1, AlphaOption.multiply)
+```
+
+#### compareMultiplePixels()
+
+same as simple pixel to pixel comparison but can compare arrays instead, arrays
+must be the same length, however, it supports `undefined` pixels for which you
+can set the `undefinedScore` (by default `255 * 3` - 3 channels)
+
+```ts
+//510 + 255 * 3 = 1275
+Comparator.compareMultiplePixels([P1, undefined], [P2, P1], AlphaOption.ignore)
+//510 + 0 = 510
+Comparator.compareMultiplePixels(
+  [P1, undefined],
+  [P2, P1],
+  AlphaOption.ignore,
+  0,
+)
+```

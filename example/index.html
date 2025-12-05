@@ -85,7 +85,19 @@
     </div>
 
     <script type="module">
-      const { default: Picture, Pixel, Kernel } = await loadLibrary()
+      const {
+        default: Picture,
+        Pixel,
+        Kernel,
+        Comparator,
+        AlphaOption,
+      } = await loadLibrary()
+      window.Picture = Picture
+      window.Pixel = Pixel
+      window.Kernel = Kernel
+      window.Comparator = Comparator
+      window.AlphaOption = AlphaOption
+
       const img = document.getElementById('image')
       const canvas = document.getElementById('canvas')
       const ctx = canvas.getContext('2d')
