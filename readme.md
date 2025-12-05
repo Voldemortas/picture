@@ -343,3 +343,18 @@ Comparator.compareMultiplePixels(
   0,
 )
 ```
+
+---
+
+## Running locally
+
+`git clone git@github.com:Voldemortas/picture.git`
+
+and then use `deno task`'s
+
+`deno task test` - runs tests and creates coverage report in `cov_profile/`
+directory\
+`deno task build` - compiles code into javascript, needed for inspecting live
+example\
+`deno task server` - runs deno's `file-server` (needs global installation), good
+for previewing docs, coverage report, inspecting live example
