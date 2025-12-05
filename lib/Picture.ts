@@ -6,7 +6,9 @@ import {
   NO_ALPHA_CHANNELS,
   TRUE_GRAY_RATIO,
 } from './common.ts'
-import type { PixelCallback, RgbaArray } from './common.ts'
+import type { OptionalAlphaArray, PixelCallback, RgbaArray } from './common.ts'
+import Comparator from './Comparator.ts'
+import { AlphaOption } from './Comparator.ts'
 import Pixel from './Pixel.ts'
 
 /**
@@ -17,6 +19,12 @@ import Pixel from './Pixel.ts'
  * @property {Uint8ClampedArray} data - imada data
  * @property {4} channels - 4
  */
+type RGBA_IMAGE = {
+  width: number
+  height: number
+  data: Uint8ClampedArray
+  channels: 4
+}
 /**
  * Image with RGB channels
  * @typedef {Object} RGB_IMAGE
@@ -25,6 +33,12 @@ import Pixel from './Pixel.ts'
  * @property {Uint8ClampedArray} data - imada data
  * @property {3} channels - 3
  */
+type RGB_IMAGE = {
+  width: number
+  height: number
+  data: Uint8ClampedArray
+  channels: 3
+}
 
 /**
  * My custom wrapper to do various pixel oriented operations
@@ -43,13 +57,17 @@ export default class Picture {
    * Image data with RGBA (4) channels
    */
   public readonly data: Uint8ClampedArray
+  /**
+   * Ammount of channels
+   */
+  public readonly channels = 4
 
   /**
    * creates new Picture object
    * @param {number} width - width of the image
    * @param {number} height - height of the image
-   * @param {Uint8ClampedArray} data - rgb(a) data, note that every pixel must be represent either by 3 or 4 channels (alpha is optional)
-   * thus data.length must be `width * height * 3` or `width * height * 4`
+   * @param {Uint8ClampedArray} data - rgb(a) data, note that every pixel must be represent either by 3 or 4 channels 
+   * (alpha is optional) thus data.length must be `width * height * 3` or `width * height * 4`
    *
    * Throws an error if the width*height:data ratio missmatches
    */
@@ -140,7 +158,8 @@ export default class Picture {
   }
 
   /**
-   * Monochromizes the image - makes all the RGB channels have the same value (thus everything is from white, to gray, to black)
+   * Monochromizes the image - makes all the RGB channels have the same value 
+   * (thus everything is from white, to gray, to black)
    * @param {[number, number, number]=} rgb - RGB array, all vallues should add up to 1
    * @returns {Picture} - monochromized picture
    *
@@ -305,8 +324,29 @@ export default class Picture {
   ): Picture {
     return Picture.merge2(this, topLayer, offsetX, offsetY)
   }
+
   /**
-   * Monochromizes the image - makes all the RGB channels have the same value (thus everything is from white, to gray, to black)
+   * Creates a new Image with the dimensions of the 1st image.
+   * The new image has rgb channels all being [0, 0, 0], the difference is in the alpha channel
+   * 0 - fully transparent = the images are equal; 225 - images are completely different
+   *
+   * @param {Picture} block - a rectangle, that will be repeatedly (assuming it's smaller than the image) put onto image
+   *  and compared against the region it's being put on
+   * @param {number} offsetX
+   * @param {number} offsetY
+   */
+  public createBlockSimilarityMask(
+    block: Picture,
+    offsetX: number = 0,
+    offsetY: number = 0,
+  ): Picture {
+    return Picture.createBlockSimilarityMask(this, block, offsetX, offsetY)
+  }
+  ////////////STATIC////////////
+
+  /**
+   * Monochromizes the image - makes all the RGB channels have the same value 
+   * (thus everything is from white, to gray, to black)
    * @param {Picture} image
    * @param {[number, number, number]=} rgb - RGB array, all vallues should add up to 1
    * @returns {Picture} - monochromized picture
@@ -394,7 +434,7 @@ export default class Picture {
     for (let i = 1; i < colorSpaceRatios.length + 1; i++) {
       ranges.push(
         ranges[i - 1] +
-          (MAX_PIXEL + 1) / ratiosSum * colorSpaceRatios[i - 1],
+        (MAX_PIXEL + 1) / ratiosSum * colorSpaceRatios[i - 1],
       )
     }
     ranges[0] = 0
@@ -526,12 +566,13 @@ export default class Picture {
   }
 
   /**
-   * Helper function to find which linear coordinates (indices) of the picture correspond to which kernel coordinates (indices).
+   * Helper function to find which linear coordinates (indices) of the picture 
+   * correspond to which kernel coordinates (indices).
    *
    * @param {[number, number]} - [imageWidth, imageHeight]
    * @param {[number, number]} - [x, y] of the pixel
    * @param {[number, number]} - [kernelWidth, kernerHeight]
-   * @returns {(number|undefined)[]} response's cell is `undefined` if the supposed kernel's match is out of image's bounds
+   * @returns {(number|undefined)[]} response's cell is `undefined` if the supposed kernel's match is out of bounds
    */
   public static findCoordsToConvolveKernel(
     [imageWidth, imageHeight]: [number, number],
@@ -676,5 +717,86 @@ export default class Picture {
       }
     }
     return new Picture(width, height, data)
+  }
+
+  /**
+   * Creates a new Image with the dimensions of the 1st image.
+   * The new image has rgb channels all being [0, 0, 0], the difference is in the alpha channel
+   * 0 - fully transparent = the images are equal; 225 - images are completely different
+   *
+   * @param main
+   * @param block
+   * @param offsetX
+   * @param offsetY
+   */
+  public static createBlockSimilarityMask(
+    main: Picture,
+    block: Picture,
+    offsetX: number = 0,
+    offsetY: number = 0,
+  ): Picture {
+    if (
+      offsetX < 0 || offsetX > block.width || offsetY < 0 ||
+      offsetY > block.height
+    ) {
+      const realXoffset = (block.width + (offsetX % block.width)) % block.width
+      const realYoffset = (block.height + (offsetY % block.height)) %
+        block.height
+      return Picture.createBlockSimilarityMask(
+        main,
+        block,
+        realXoffset,
+        realYoffset,
+      )
+    }
+    const black = new Array(3).fill(0) as [number, number, number]
+    const data = new Uint8ClampedArray(main.data.length)
+    const totalPixelsInBlock = block.width * block.height
+    const totalChannelsInBlock = totalPixelsInBlock / NO_ALPHA_CHANNELS
+
+    const startingX = (offsetX % block.width - block.width) % block.width
+    const startingY = (offsetY % block.height - block.height) % block.height
+
+    for (let y = startingY; y < main.height; y += block.height) {
+      for (let x = startingX; x < main.width; x += block.width) {
+        const pixelIds: (undefined | number)[] = []
+        const channels: (undefined | RgbaArray)[] = []
+        for (let i = y; i < y + block.height; i++) {
+          if (i < 0 || i >= main.height) {
+            pixelIds.push(undefined)
+            channels.push(...new Array(block.width).fill(undefined))
+            continue
+          }
+          for (let j = x; j < x + block.height; j++) {
+            if (j < 0 || j >= main.width) {
+              pixelIds.push(undefined)
+              channels.push(undefined)
+            } else {
+              const pixelId = j + i * main.width
+              pixelIds.push(pixelId)
+              channels.push(
+                [...main.data.subarray(
+                  pixelId * CHANNELS,
+                  pixelId * CHANNELS + CHANNELS,
+                )] as RgbaArray,
+              )
+            }
+          }
+        }
+        const score = Comparator.compareMultiplePixels(
+          channels,
+          block.data,
+          AlphaOption.multiply,
+        ) / totalChannelsInBlock / block.width / block.height
+
+        pixelIds.forEach((p) => {
+          if (p !== undefined) {
+            data.set([...black, score], p * CHANNELS)
+          }
+        })
+      }
+    }
+
+    return new Picture(main.width, main.height, data)
   }
 }

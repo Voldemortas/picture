@@ -1,9 +1,25 @@
 # Picture
 
-## Links
+## About
 
-github: [Voldemortas/Picture](https://github.com/Voldemortas/Picture)\
-jsr: [@voldemortas/picture](https://jsr.io/@voldemortas/picture)
+Personal custom library used for various image related manipulations. The name
+is `picture` because `Image` would conflict with the
+[`HTMLImageElement`](https://developer.mozilla.org/en-US/docs/Web/API/HTMLImageElement/Image).
+
+## Running locally
+
+`git clone git@github.com:Voldemortas/picture.git`
+
+and then use `deno task`'s
+
+`deno task test` - runs tests and creates coverage report in `cov_profile/`
+directory\
+`deno task build` - compiles code into javascript, needed for inspecting live
+example\
+`deno task server` - runs deno's `file-server` (needs global installation), good
+for previewing docs, coverage report, inspecting live example
+
+---
 
 ## Instalation
 
@@ -19,11 +35,29 @@ bunx jsr add @voldemortas/picture
 
 And import with
 
-`import Picture, {Pixel, Kernel} from "@voldemortas/picture";`\
-or\
-`import Picture, {Pixel, Kernel} from "jsr:@voldemortas/picture";`\
-or if using browser:\
-`import Picture, {Pixel, Kernel} from "https://esm.sh/jsr/@voldemortas/picture"`
+```ts
+import Picture, {
+  AlphaOption,
+  Comparator,
+  Kernel,
+  Pixel,
+  TRUE_GRAY_RATIO,
+} from '@voldemortas/picture'
+```
+
+or if using browser:
+
+```ts
+import Picture, {
+  AlphaOption,
+  Comparator,
+  Kernel,
+  Pixel,
+  TRUE_GRAY_RATIO,
+} from 'https://esm.sh/jsr/@voldemortas/picture'
+```
+
+---
 
 ## Usage
 
@@ -215,6 +249,30 @@ const imagePixelIds = Picture.findCoordsToConvolveKernel(
 As the pixel was ❷, the pixels in question needed for convulation are shown in
 black circles.
 
+#### merge2
+
+merges one picture onto another
+
+```ts
+const white = [255, 255, 255, 255]
+const data = new Uint8ClampedArray(new Array(9).fill(white).flat())
+const reddish = [255, 0, 0, 63]
+const red = [255, 0, 0, 255]
+const a = new Picture(3, 3, data)
+const b = new Picture(2, 1, new Uint8ClampedArray(reddish, red).flat())
+//replaces center and centre-right pixels
+const c = Picture.merge2(a, b, 1, 1)
+//c.data is [
+//255, 255, 255, 255,   255, 255, 255, 255,   255, 255, 255, 255
+//255, 255, 255, 255,   255, 192, 192, 255,   255, 0, 0, 255
+//255, 255, 255, 255,   255, 255, 255, 255,   255, 255, 255, 255
+//]
+```
+
+#### createBlockSimilarityMask
+
+_**TODO**_ - MISSING DESCRIPTION, BAD DEV :/
+
 ---
 
 ### Pixel
@@ -300,13 +358,16 @@ export enum AlphaOption {
 #### comparePixels()
 
 ```ts
+//rgba pixel
 const P1 = [255, 0, 0, 63]
+//pixel represented with Uint8ClampedArray
+const P0 = new Uint8ClampedArray(P1)
 const P2 = [0, 255, 0, 127]
 ```
 
 ```ts
 //255 of red + 255 of green + 0 of blue = 510; alpha channel is ignored
-Comparator.comparePixels(P1, P2, AlphaOption.ignore)
+Comparator.comparePixels(P0, P2, AlphaOption.ignore)
 //255 of red + 255 of green + 0 of blue = 510; alpha channel is ignored
 Comparator.comparePixels(P2, P1, AlphaOption.ignore)
 
@@ -343,18 +404,3 @@ Comparator.compareMultiplePixels(
   0,
 )
 ```
-
----
-
-## Running locally
-
-`git clone git@github.com:Voldemortas/picture.git`
-
-and then use `deno task`'s
-
-`deno task test` - runs tests and creates coverage report in `cov_profile/`
-directory\
-`deno task build` - compiles code into javascript, needed for inspecting live
-example\
-`deno task server` - runs deno's `file-server` (needs global installation), good
-for previewing docs, coverage report, inspecting live example

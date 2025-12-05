@@ -1,5 +1,5 @@
 import Picture from './Picture.ts'
-import Pixel from './Picture.ts'
+import Pixel from './Pixel.ts'
 import { TRUE_GRAY_RATIO } from './common.ts'
 import type { OptionalAlphaArray, PixelCallback, RgbaArray } from './common.ts'
 import { Kernel } from './Kernel.ts'

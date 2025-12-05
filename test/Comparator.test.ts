@@ -6,6 +6,7 @@ import type { RgbaArray } from '~lib/common.ts'
 const P1: RgbaArray = [255, 0, 0, 255]
 const P2: RgbaArray = [0, 255, 0, 127]
 const P3: RgbaArray = [0, 255, 0, 0]
+const P4 = new Uint8ClampedArray(P3)
 
 describe('Comparator', () => {
   describe('Comparator.comparePixels()', () => {
@@ -14,9 +15,9 @@ describe('Comparator', () => {
         .toStrictEqual(255 + 255)
       expect(Comparator.comparePixels(P2, P1, AlphaOption.ignore))
         .toStrictEqual(255 + 255)
-      expect(Comparator.comparePixels(P2, P3, AlphaOption.ignore))
+      expect(Comparator.comparePixels(P2, P4, AlphaOption.ignore))
         .toStrictEqual(0)
-      expect(Comparator.comparePixels(P3, P2, AlphaOption.ignore))
+      expect(Comparator.comparePixels(P4, P2, AlphaOption.ignore))
         .toStrictEqual(0)
     })
     test('AlphaOption.ignoreFirst', () => {
@@ -28,8 +29,6 @@ describe('Comparator', () => {
         .toStrictEqual(255)
       expect(Comparator.comparePixels(P3, P2, AlphaOption.ignoreFirst))
         .toStrictEqual(255 - 127)
-    })
-    test('AlphaOption.compare', () => {
       expect(Comparator.comparePixels([255, 0, 0], P2, AlphaOption.ignoreFirst))
         .toStrictEqual(255 + 127)
       expect(
@@ -38,8 +37,18 @@ describe('Comparator', () => {
           [0, 255, 0],
           AlphaOption.ignoreFirst,
         ),
-      )
-        .toStrictEqual(255 + 255)
+      ).toStrictEqual(255 + 255)
+    })
+    test('AlphaOption.compare', () => {
+      expect(Comparator.comparePixels([255, 0, 0], P2, AlphaOption.compare))
+        .toStrictEqual(255 + 255 + 128)
+      expect(
+        Comparator.comparePixels(
+          [255, 0, 0],
+          [0, 255, 0],
+          AlphaOption.compare,
+        ),
+      ).toStrictEqual(255 + 255)
       expect(Comparator.comparePixels(P1, P2, AlphaOption.compare))
         .toStrictEqual(255 + 255 + 128)
       expect(Comparator.comparePixels(P2, P1, AlphaOption.compare))
@@ -65,6 +74,7 @@ describe('Comparator', () => {
     })
   })
   describe('Comparator.compareMultiplePixels()', () => {
+    const array0 = new Uint8ClampedArray([P1, P2, P2, P3].flat())
     const array1 = [P1, P2, P2, P3]
     const array2 = [P2, P1, P3, P2]
     test('AlphaOption.ignore', () => {
@@ -75,7 +85,7 @@ describe('Comparator', () => {
     test('AlphaOption.ignoreFirst', () => {
       expect(
         Comparator.compareMultiplePixels(
-          array1,
+          array0,
           array2,
           AlphaOption.ignoreFirst,
         ),

@@ -4,7 +4,7 @@ import {
   MAX_PIXEL,
   NO_ALPHA_CHANNELS,
 } from './common.ts'
-import type { OptionalAlphaArray } from './common.ts'
+import type { OptionalAlphaArray, RgbaArray } from './common.ts'
 
 /**
  * Enum for alpha channel comparisons
@@ -46,10 +46,19 @@ export default class Comparator {
    * @returns numeric value, the lower it is, the more similar pixels are
    */
   public static comparePixels(
-    a: OptionalAlphaArray,
-    b: OptionalAlphaArray,
+    a: OptionalAlphaArray | Uint8ClampedArray,
+    b: OptionalAlphaArray | Uint8ClampedArray,
     alpha: keyof typeof AlphaOption = AlphaOption.ignore,
   ): number {
+    if (a instanceof Uint8ClampedArray || b instanceof Uint8ClampedArray) {
+      const escapedA = a instanceof Uint8ClampedArray
+        ? [...a.values()] as OptionalAlphaArray
+        : a
+      const escapedB = b instanceof Uint8ClampedArray
+        ? [...b.values()] as OptionalAlphaArray
+        : b
+      return this.comparePixels(escapedA, escapedB, alpha)
+    }
     let answer = 0
     if (alpha === AlphaOption.ignore) {
       for (let i = 0; i < NO_ALPHA_CHANNELS; i++) {
@@ -82,18 +91,32 @@ export default class Comparator {
 
   /**
    * Compares array of pixels to another array of pixels
-   * @param {(OptionalAlphaArray | undefined)[]} a - a pixel array represented by an array of `[r, g, b, a?]` array
-   * @param {(OptionalAlphaArray | undefined)[]} b - a pixel array represented by an array of `[r, g, b, a?]` array
+   * @param {(OptionalAlphaArray | undefined)[] | Uint8ClampedArray} a - a pixel array represented by an array of `[r, g, b, a?]` or Uint8ClampedArray
+   * @param {(OptionalAlphaArray | undefined)[] | Uint8ClampedArray} b - a pixel array represented by an array of `[r, g, b, a?]` or Uint8ClampedArray
    * @param {AlphaOption=} alpha - options used for pixel channel's comparison
    * @param {number=} undefinedScore - score for when the pixel is undefined
    * @returns numeric value, the lower it is, the more similar pixels are
    */
   public static compareMultiplePixels(
-    a: (OptionalAlphaArray | undefined)[],
-    b: (OptionalAlphaArray | undefined)[],
+    a: (OptionalAlphaArray | undefined)[] | Uint8ClampedArray,
+    b: (OptionalAlphaArray | undefined)[] | Uint8ClampedArray,
     alpha = AlphaOption.ignore,
     undefinedScore = 255 * NO_ALPHA_CHANNELS,
   ): number {
+    if (a instanceof Uint8ClampedArray || b instanceof Uint8ClampedArray) {
+      const escapedA = a instanceof Uint8ClampedArray
+        ? groupArr([...a.values()], 4) as RgbaArray[]
+        : a
+      const escapedB = b instanceof Uint8ClampedArray
+        ? groupArr([...b.values()], 4) as RgbaArray[]
+        : b
+      return this.compareMultiplePixels(
+        escapedA,
+        escapedB,
+        alpha,
+        undefinedScore,
+      )
+    }
     if (a.length !== b.length) {
       throw new Error('Lengths of arrays must match')
     }
@@ -102,9 +125,25 @@ export default class Comparator {
       if (a[i] === undefined || b[i] === undefined) {
         answer += undefinedScore
       } else {
-        answer += this.comparePixels(a[i]!, b[i]!, alpha)
+        answer += this.comparePixels(
+          a[i]! as OptionalAlphaArray,
+          b[i]! as OptionalAlphaArray,
+          alpha,
+        )
       }
     }
     return answer
   }
+}
+
+function groupArr<T>(data: T[], n: number): T[][] {
+  const group: T[][] = []
+  for (let i = 0, j = 0; i < data.length; i++) {
+    if (i >= n && i % n === 0) {
+      j++
+    }
+    group[j] = group[j] || []
+    group[j].push(data[i])
+  }
+  return group
 }
