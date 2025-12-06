@@ -372,7 +372,7 @@ export enum AlphaOption {
    * cares about alpha channels, however, instead of multiplying rgb channels by their
    * transparency, it just does simple `Math.abs(a[3] - b[3])`
    */
-  compare = 'compare',
+  subtract = 'subtract',
 }
 ```
 
@@ -398,9 +398,9 @@ Comparator.comparePixels(P1, P2, AlphaOption.ignoreFirst)
 Comparator.comparePixels(P2, P1, AlphaOption.ignoreFirst)
 
 //255 of red + 255 of green + 0 of blue + 64 of alpha = 574
-Comparator.comparePixels(P1, P2, AlphaOption.compare)
+Comparator.comparePixels(P1, P2, AlphaOption.subtract)
 //255 of red + 255 of green + 0 of blue + 64 of alpha = 574
-Comparator.comparePixels(P2, P1, AlphaOption.compare)
+Comparator.comparePixels(P2, P1, AlphaOption.subtract)
 
 //63 of red + 127 of green = 190
 Comparator.comparePixels(P1, P2, AlphaOption.multiply)

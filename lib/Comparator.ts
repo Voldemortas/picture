@@ -31,7 +31,7 @@ export enum AlphaOption {
    * cares about alpha channels, however, instead of multiplying rgb channels by their
    * transparency, it just does simple `Math.abs(a[3] - b[3])`
    */
-  compare = 'compare',
+  subtract = 'subtract',
 }
 
 /**
@@ -66,27 +66,25 @@ export default class Comparator {
       }
       return answer
     }
-    if (alpha === AlphaOption.compare) {
+    if (alpha === AlphaOption.subtract) {
       answer = this.comparePixels(a, b, AlphaOption.ignore)
       answer += Math.abs(
         (a[CHANNELS - 1] ?? DEFAULT_ALPHA) - (b[CHANNELS - 1] ?? DEFAULT_ALPHA),
       )
       return answer
     }
-    const bTransparency = (b[CHANNELS - 1] ?? DEFAULT_ALPHA) /
-      MAX_PIXEL
-    if (alpha === AlphaOption.ignoreFirst) {
-      for (let i = 0; i < NO_ALPHA_CHANNELS; i++) {
-        answer += Math.abs(a[i]! - b[i]! * bTransparency)
-      }
-      return answer
+    function getTranparency(arr: OptionalAlphaArray) {
+      return (arr[CHANNELS - 1] ?? DEFAULT_ALPHA) / MAX_PIXEL
     }
-    const aTransparency = (a[CHANNELS - 1] ?? DEFAULT_ALPHA) /
-      MAX_PIXEL
+    const aTransparency = alpha === AlphaOption.ignoreFirst
+      ? 1
+      : getTranparency(a)
+    const bTransparency = getTranparency(b)
+
     for (let i = 0; i < NO_ALPHA_CHANNELS; i++) {
-      answer += Math.abs(a[i]! * aTransparency - b[i]! * bTransparency)
+      answer += Math.abs(a[i]! - b[i]!)
     }
-    return answer
+    return answer * aTransparency * bTransparency
   }
 
   /**
