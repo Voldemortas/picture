@@ -6,7 +6,7 @@ import {
   NO_ALPHA_CHANNELS,
   TRUE_GRAY_RATIO,
 } from './common.ts'
-import type { OptionalAlphaArray, PixelCallback, RgbaArray } from './common.ts'
+import type { PixelCallback, RgbaArray } from './common.ts'
 import Comparator from './Comparator.ts'
 import { AlphaOption } from './Comparator.ts'
 import Pixel from './Pixel.ts'
@@ -66,7 +66,7 @@ export default class Picture {
    * creates new Picture object
    * @param {number} width - width of the image
    * @param {number} height - height of the image
-   * @param {Uint8ClampedArray} data - rgb(a) data, note that every pixel must be represent either by 3 or 4 channels 
+   * @param {Uint8ClampedArray} data - rgb(a) data, note that every pixel must be represent either by 3 or 4 channels
    * (alpha is optional) thus data.length must be `width * height * 3` or `width * height * 4`
    *
    * Throws an error if the width*height:data ratio missmatches
@@ -158,7 +158,7 @@ export default class Picture {
   }
 
   /**
-   * Monochromizes the image - makes all the RGB channels have the same value 
+   * Monochromizes the image - makes all the RGB channels have the same value
    * (thus everything is from white, to gray, to black)
    * @param {[number, number, number]=} rgb - RGB array, all vallues should add up to 1
    * @returns {Picture} - monochromized picture
@@ -345,7 +345,7 @@ export default class Picture {
   ////////////STATIC////////////
 
   /**
-   * Monochromizes the image - makes all the RGB channels have the same value 
+   * Monochromizes the image - makes all the RGB channels have the same value
    * (thus everything is from white, to gray, to black)
    * @param {Picture} image
    * @param {[number, number, number]=} rgb - RGB array, all vallues should add up to 1
@@ -434,7 +434,7 @@ export default class Picture {
     for (let i = 1; i < colorSpaceRatios.length + 1; i++) {
       ranges.push(
         ranges[i - 1] +
-        (MAX_PIXEL + 1) / ratiosSum * colorSpaceRatios[i - 1],
+          (MAX_PIXEL + 1) / ratiosSum * colorSpaceRatios[i - 1],
       )
     }
     ranges[0] = 0
@@ -566,7 +566,7 @@ export default class Picture {
   }
 
   /**
-   * Helper function to find which linear coordinates (indices) of the picture 
+   * Helper function to find which linear coordinates (indices) of the picture
    * correspond to which kernel coordinates (indices).
    *
    * @param {[number, number]} - [imageWidth, imageHeight]
@@ -749,7 +749,7 @@ export default class Picture {
         realYoffset,
       )
     }
-    const black = new Array(3).fill(0) as [number, number, number]
+    const black = new Array(NO_ALPHA_CHANNELS).fill(0) as number[]
     const data = new Uint8ClampedArray(main.data.length)
     const totalPixelsInBlock = block.width * block.height
     const totalChannelsInBlock = totalPixelsInBlock / NO_ALPHA_CHANNELS
@@ -767,7 +767,7 @@ export default class Picture {
             channels.push(...new Array(block.width).fill(undefined))
             continue
           }
-          for (let j = x; j < x + block.height; j++) {
+          for (let j = x; j < x + block.width; j++) {
             if (j < 0 || j >= main.width) {
               pixelIds.push(undefined)
               channels.push(undefined)

@@ -2,7 +2,7 @@ import { expect } from '@std/expect'
 import { describe, it } from '@std/testing/bdd'
 import Picture from '~lib/Picture.ts'
 import { Kernel } from '~lib/Kernel.ts'
-import { CHANNELS, MAX_PIXEL } from '~lib/common.ts'
+import { CHANNELS, MAX_PIXEL, NO_ALPHA_CHANNELS } from '~lib/common.ts'
 
 const WIDTH = 3
 const HEIGHT = 2
@@ -386,119 +386,149 @@ describe('Picture', () => {
     })
   })
   describe('createBlockSimilarityMask', () => {
-    const B = [0, 0, 0, 255]
-    const W = [255, 255, 255, 255]
-    //<! -- deno-fmt-ignore-start -->
-    const bigData = [
-      W, W, W, W, W,
-      W, B, B, B, W,
-      W, B, B, B, W,
-      W, B, B, B, W,
-      W, W, W, W, W
-    ]
-    //<! -- deno-fmt-ignore-end -->
-    const smallData = new Array(9).fill(B)
-    const big = new Picture(5, 5, new Uint8ClampedArray(bigData.flat()))
-    const small = new Picture(3, 3, new Uint8ClampedArray(smallData.flat()))
+    describe('test 1', () => {
+      const B = [0, 0, 0, 255]
+      const W = [255, 255, 255, 255]
+      //<! -- deno-fmt-ignore-start -->
+      const bigData = [
+        W, W, W, W, W,
+        W, B, B, B, W,
+        W, B, B, B, W,
+        W, B, B, B, W,
+        W, W, W, W, W
+      ]
+      //<! -- deno-fmt-ignore-end -->
+      const smallData = new Array(9).fill(B)
+      const big = new Picture(5, 5, new Uint8ClampedArray(bigData.flat()))
+      const small = new Picture(3, 3, new Uint8ClampedArray(smallData.flat()))
 
-    //<! -- deno-fmt-ignore-start -->
-    const results: Uint8ClampedArray[] = [
-      new Uint8ClampedArray([
-        getTransparentLine(5 / 9, 3), getTransparentLine(7 / 9, 2),
-        getTransparentLine(5 / 9, 3), getTransparentLine(7 / 9, 2),
-        getTransparentLine(5 / 9, 3), getTransparentLine(7 / 9, 2),
-        getTransparentLine(7 / 9, 3), getTransparentLine(8 / 9, 2),
-        getTransparentLine(7 / 9, 3), getTransparentLine(8 / 9, 2),
-      ].flat()),
-      new Uint8ClampedArray([
-        getTransparentLine(9 / 9, 1), getTransparentLine(3 / 9, 3), getTransparentLine(9 / 9, 1),
-        getTransparentLine(9 / 9, 1), getTransparentLine(3 / 9, 3), getTransparentLine(9 / 9, 1),
-        getTransparentLine(9 / 9, 1), getTransparentLine(3 / 9, 3), getTransparentLine(9 / 9, 1),
-        getTransparentLine(9 / 9, 1), getTransparentLine(6 / 9, 3), getTransparentLine(9 / 9, 1),
-        getTransparentLine(9 / 9, 1), getTransparentLine(6 / 9, 3), getTransparentLine(9 / 9, 1),
-      ].flat()),
-      new Uint8ClampedArray([
-        getTransparentLine(7 / 9, 2), getTransparentLine(5 / 9, 3),
-        getTransparentLine(7 / 9, 2), getTransparentLine(5 / 9, 3),
-        getTransparentLine(7 / 9, 2), getTransparentLine(5 / 9, 3),
-        getTransparentLine(8 / 9, 2), getTransparentLine(7 / 9, 3),
-        getTransparentLine(8 / 9, 2), getTransparentLine(7 / 9, 3),
-      ].flat()),
-      ///////
-      new Uint8ClampedArray([
-        getTransparentLine(9 / 9, 5),
-        getTransparentLine(3 / 9, 3), getTransparentLine(6 / 9, 2),
-        getTransparentLine(3 / 9, 3), getTransparentLine(6 / 9, 2),
-        getTransparentLine(3 / 9, 3), getTransparentLine(6 / 9, 2),
-        getTransparentLine(9 / 9, 5),
-      ].flat()),
-      new Uint8ClampedArray([
-        getTransparentLine(9 / 9, 5),
-        getTransparentLine(9 / 9, 1), getTransparentLine(0 / 9, 3), getTransparentLine(9 / 9, 1),
-        getTransparentLine(9 / 9, 1), getTransparentLine(0 / 9, 3), getTransparentLine(9 / 9, 1),
-        getTransparentLine(9 / 9, 1), getTransparentLine(0 / 9, 3), getTransparentLine(9 / 9, 1),
-        getTransparentLine(9 / 9, 5),
-      ].flat()),
-      new Uint8ClampedArray([
-        getTransparentLine(9 / 9, 5),
-        getTransparentLine(6 / 9, 2), getTransparentLine(3 / 9, 3),
-        getTransparentLine(6 / 9, 2), getTransparentLine(3 / 9, 3),
-        getTransparentLine(6 / 9, 2), getTransparentLine(3 / 9, 3),
-        getTransparentLine(9 / 9, 5),
-      ].flat()),
-      //////
-      new Uint8ClampedArray([
-        getTransparentLine(7 / 9, 3), getTransparentLine(8 / 9, 2),
-        getTransparentLine(7 / 9, 3), getTransparentLine(8 / 9, 2),
-        getTransparentLine(5 / 9, 3), getTransparentLine(7 / 9, 2),
-        getTransparentLine(5 / 9, 3), getTransparentLine(7 / 9, 2),
-        getTransparentLine(5 / 9, 3), getTransparentLine(7 / 9, 2),
-      ].flat()),
-      new Uint8ClampedArray([
-        getTransparentLine(9 / 9, 1), getTransparentLine(6 / 9, 3), getTransparentLine(9 / 9, 1),
-        getTransparentLine(9 / 9, 1), getTransparentLine(6 / 9, 3), getTransparentLine(9 / 9, 1),
-        getTransparentLine(9 / 9, 1), getTransparentLine(3 / 9, 3), getTransparentLine(9 / 9, 1),
-        getTransparentLine(9 / 9, 1), getTransparentLine(3 / 9, 3), getTransparentLine(9 / 9, 1),
-        getTransparentLine(9 / 9, 1), getTransparentLine(3 / 9, 3), getTransparentLine(9 / 9, 1),
-      ].flat()),
-      new Uint8ClampedArray([
-        getTransparentLine(8 / 9, 2), getTransparentLine(7 / 9, 3),
-        getTransparentLine(8 / 9, 2), getTransparentLine(7 / 9, 3),
-        getTransparentLine(7 / 9, 2), getTransparentLine(5 / 9, 3),
-        getTransparentLine(7 / 9, 2), getTransparentLine(5 / 9, 3),
-        getTransparentLine(7 / 9, 2), getTransparentLine(5 / 9, 3),
-      ].flat()),
-    ]
-    //<! -- deno-fmt-ignore-end -->
+      //<! -- deno-fmt-ignore-start -->
+      const results: Uint8ClampedArray[] = [
+        new Uint8ClampedArray([
+          getTransparentLine(5 / 9, 3), getTransparentLine(7 / 9, 2),
+          getTransparentLine(5 / 9, 3), getTransparentLine(7 / 9, 2),
+          getTransparentLine(5 / 9, 3), getTransparentLine(7 / 9, 2),
+          getTransparentLine(7 / 9, 3), getTransparentLine(8 / 9, 2),
+          getTransparentLine(7 / 9, 3), getTransparentLine(8 / 9, 2),
+        ].flat()),
+        new Uint8ClampedArray([
+          getTransparentLine(9 / 9, 1), getTransparentLine(3 / 9, 3), getTransparentLine(9 / 9, 1),
+          getTransparentLine(9 / 9, 1), getTransparentLine(3 / 9, 3), getTransparentLine(9 / 9, 1),
+          getTransparentLine(9 / 9, 1), getTransparentLine(3 / 9, 3), getTransparentLine(9 / 9, 1),
+          getTransparentLine(9 / 9, 1), getTransparentLine(6 / 9, 3), getTransparentLine(9 / 9, 1),
+          getTransparentLine(9 / 9, 1), getTransparentLine(6 / 9, 3), getTransparentLine(9 / 9, 1),
+        ].flat()),
+        new Uint8ClampedArray([
+          getTransparentLine(7 / 9, 2), getTransparentLine(5 / 9, 3),
+          getTransparentLine(7 / 9, 2), getTransparentLine(5 / 9, 3),
+          getTransparentLine(7 / 9, 2), getTransparentLine(5 / 9, 3),
+          getTransparentLine(8 / 9, 2), getTransparentLine(7 / 9, 3),
+          getTransparentLine(8 / 9, 2), getTransparentLine(7 / 9, 3),
+        ].flat()),
+        ///////
+        new Uint8ClampedArray([
+          getTransparentLine(9 / 9, 5),
+          getTransparentLine(3 / 9, 3), getTransparentLine(6 / 9, 2),
+          getTransparentLine(3 / 9, 3), getTransparentLine(6 / 9, 2),
+          getTransparentLine(3 / 9, 3), getTransparentLine(6 / 9, 2),
+          getTransparentLine(9 / 9, 5),
+        ].flat()),
+        new Uint8ClampedArray([
+          getTransparentLine(9 / 9, 5),
+          getTransparentLine(9 / 9, 1), getTransparentLine(0 / 9, 3), getTransparentLine(9 / 9, 1),
+          getTransparentLine(9 / 9, 1), getTransparentLine(0 / 9, 3), getTransparentLine(9 / 9, 1),
+          getTransparentLine(9 / 9, 1), getTransparentLine(0 / 9, 3), getTransparentLine(9 / 9, 1),
+          getTransparentLine(9 / 9, 5),
+        ].flat()),
+        new Uint8ClampedArray([
+          getTransparentLine(9 / 9, 5),
+          getTransparentLine(6 / 9, 2), getTransparentLine(3 / 9, 3),
+          getTransparentLine(6 / 9, 2), getTransparentLine(3 / 9, 3),
+          getTransparentLine(6 / 9, 2), getTransparentLine(3 / 9, 3),
+          getTransparentLine(9 / 9, 5),
+        ].flat()),
+        //////
+        new Uint8ClampedArray([
+          getTransparentLine(7 / 9, 3), getTransparentLine(8 / 9, 2),
+          getTransparentLine(7 / 9, 3), getTransparentLine(8 / 9, 2),
+          getTransparentLine(5 / 9, 3), getTransparentLine(7 / 9, 2),
+          getTransparentLine(5 / 9, 3), getTransparentLine(7 / 9, 2),
+          getTransparentLine(5 / 9, 3), getTransparentLine(7 / 9, 2),
+        ].flat()),
+        new Uint8ClampedArray([
+          getTransparentLine(9 / 9, 1), getTransparentLine(6 / 9, 3), getTransparentLine(9 / 9, 1),
+          getTransparentLine(9 / 9, 1), getTransparentLine(6 / 9, 3), getTransparentLine(9 / 9, 1),
+          getTransparentLine(9 / 9, 1), getTransparentLine(3 / 9, 3), getTransparentLine(9 / 9, 1),
+          getTransparentLine(9 / 9, 1), getTransparentLine(3 / 9, 3), getTransparentLine(9 / 9, 1),
+          getTransparentLine(9 / 9, 1), getTransparentLine(3 / 9, 3), getTransparentLine(9 / 9, 1),
+        ].flat()),
+        new Uint8ClampedArray([
+          getTransparentLine(8 / 9, 2), getTransparentLine(7 / 9, 3),
+          getTransparentLine(8 / 9, 2), getTransparentLine(7 / 9, 3),
+          getTransparentLine(7 / 9, 2), getTransparentLine(5 / 9, 3),
+          getTransparentLine(7 / 9, 2), getTransparentLine(5 / 9, 3),
+          getTransparentLine(7 / 9, 2), getTransparentLine(5 / 9, 3),
+        ].flat()),
+      ]
+      //<! -- deno-fmt-ignore-end -->
 
-    let id = 0
-    for (let i = 0; i < 3; i++) {
-      for (let j = 0; j < 3; j++) {
-        it(`creates correct mask for offsetX=${j}, offsetY=${i}`, () => {
-          expect(
-            Picture.createBlockSimilarityMask(big, small, j, i),
-          ).toEqual(
-            new Picture(5, 5, results[id++]),
-          )
-          expect(
-            Picture.createBlockSimilarityMask(big, small, j, i),
-          ).toEqual(
-            big.createBlockSimilarityMask(small, j, i),
-          )
-        })
+      let id = 0
+      for (let i = 0; i < 3; i++) {
+        for (let j = 0; j < 3; j++) {
+          it(`creates correct mask for offsetX=${j}, offsetY=${i}`, () => {
+            expect(
+              Picture.createBlockSimilarityMask(big, small, j, i),
+            ).toEqual(
+              new Picture(5, 5, results[id++]),
+            )
+            expect(
+              Picture.createBlockSimilarityMask(big, small, j, i),
+            ).toEqual(
+              big.createBlockSimilarityMask(small, j, i),
+            )
+          })
+        }
       }
-    }
-    it('creates correct mask for offsetX=-1, offsetY=4', () => {
-      expect(
-        Picture.createBlockSimilarityMask(big, small, -1, 4),
-      ).toEqual(
-        new Picture(5, 5, results[5]),
-      )
-      expect(
-        Picture.createBlockSimilarityMask(big, small, -1, 4),
-      ).toEqual(
-        big.createBlockSimilarityMask(small, -1, 4),
-      )
+      it('creates correct mask for offsetX=-1, offsetY=4', () => {
+        expect(
+          Picture.createBlockSimilarityMask(big, small, -1, 4),
+        ).toEqual(
+          new Picture(5, 5, results[5]),
+        )
+        expect(
+          Picture.createBlockSimilarityMask(big, small, -1, 4),
+        ).toEqual(
+          big.createBlockSimilarityMask(small, -1, 4),
+        )
+      })
+    })
+    describe('test 2', () => {
+      const Y = [255, 255, 0, 255]
+      const R = [255, 0, 0, 255]
+      //<! -- deno-fmt-ignore-start -->
+      const bigData = [
+        R, R, Y, R, R,
+        R, R, Y, R, R,
+        Y, Y, Y, Y, Y,
+        R, R, Y, R, R,
+        R, R, Y, R, R,
+      ]
+      //<! -- deno-fmt-ignore-start -->
+      const expectedResult = [
+        [0, 0, 3, 3, 4],
+        [0, 0, 3, 3, 4],
+        [4, 4, 4, 4, 4],
+        [0, 0, 3, 3, 4],
+        [0, 0, 3, 3, 4],
+      ].flat().map(x => Math.round(x / 4 * 255))
+
+      const smallData = [R, R]
+      const cross = new Picture(5, 5, new Uint8ClampedArray(bigData.flat()))
+      const block = new Picture(2, 1, new Uint8ClampedArray(smallData.flat()))
+
+      const mask = [...cross.createBlockSimilarityMask(block).data.values()]
+        .filter((_v, i) => i % CHANNELS === NO_ALPHA_CHANNELS)
+      expect(mask).toEqual(expectedResult)
     })
   })
 })
