@@ -41,22 +41,15 @@ type RGB_IMAGE = {
 }
 /**
  * does some manipulation on score
- * @callback postScoreCallback
- * @param {number} score
- * @returns {number} updated score
+ * @callback scoreCallback
+ * @param {(undefined | RgbaArray)[]} chunkData
+ * @param {Picture} block
+ * @returns {number} score
  */
-/**
- * Options for createBlockSimilarityMask
- * @typedef {Object} blockSimilarityBlockOptions
- * @property {AlphaOption=} alpha
- * @property {number=} undefinedScore
- * @property {postScoreCallback=} postScoreCallback
- */
-type blockSimilarityBlockOptions = {
-  alpha?: AlphaOption
-  undefinedScore?: number
-  postScoreCallback?: (score: number) => number
-}
+type scoreCallback = (
+  chunkData: (undefined | RgbaArray)[],
+  block: Picture,
+) => number
 
 /**
  * My custom wrapper to do various pixel oriented operations
@@ -352,7 +345,7 @@ export default class Picture {
    * picture and compared against the region it's being put on
    * @param {number} offsetX
    * @param {number} offsetY
-   * @param {blockSimilarityBlockOptions} options
+   * @param {scoreCallback=} scoreCallback
    * @returns Picture with the dimensions of the 1st image.
    * The new image has rgb channels all being [0, 0, 0], the difference is in the alpha channel
    * 0 - fully transparent = the images are equal; 225 - images are completely different
@@ -376,14 +369,14 @@ export default class Picture {
     block: Picture,
     offsetX: number = 0,
     offsetY: number = 0,
-    options: blockSimilarityBlockOptions = {},
+    scoreCallback?: scoreCallback,
   ): Picture {
     return Picture.createBlockSimilarityMask(
       this,
       block,
       offsetX,
       offsetY,
-      options,
+      scoreCallback,
     )
   }
   ////////////STATIC////////////
@@ -478,7 +471,7 @@ export default class Picture {
     for (let i = 1; i < colorSpaceRatios.length + 1; i++) {
       ranges.push(
         ranges[i - 1] +
-        (MAX_PIXEL + 1) / ratiosSum * colorSpaceRatios[i - 1],
+          (MAX_PIXEL + 1) / ratiosSum * colorSpaceRatios[i - 1],
       )
     }
     ranges[0] = 0
@@ -773,7 +766,7 @@ export default class Picture {
    *  and compared against the region it's being put on
    * @param {number} offsetX
    * @param {number} offsetY
-   * @param {blockSimilarityBlockOptions} options
+   * @param {scoreCallback=} scoreCallback
    * @returns Picture with the dimensions of the 1st image.
    * The new image has rgb channels all being [0, 0, 0], the difference is in the alpha channel
    * 0 - fully transparent = the images are equal; 225 - images are completely different
@@ -798,13 +791,9 @@ export default class Picture {
     block: Picture,
     offsetX: number = 0,
     offsetY: number = 0,
-    options: blockSimilarityBlockOptions = {},
+    scoreCallback: scoreCallback = (chunk, block) =>
+      Comparator.compareMultiplePixels(chunk, block.data, AlphaOption.multiply),
   ): Picture {
-    const {
-      alpha = AlphaOption.multiply,
-      undefinedScore,
-      postScoreCallback = (score) => score,
-    } = options
     if (
       offsetX < 0 || offsetX > block.width || offsetY < 0 ||
       offsetY > block.height
@@ -817,7 +806,7 @@ export default class Picture {
         block,
         realXoffset,
         realYoffset,
-        { alpha, undefinedScore, postScoreCallback },
+        scoreCallback,
       )
     }
     const black = new Array(NO_ALPHA_CHANNELS).fill(0) as number[]
@@ -854,14 +843,8 @@ export default class Picture {
             }
           }
         }
-        const score = postScoreCallback(
-          Comparator.compareMultiplePixels(
-            channels,
-            block.data,
-            alpha,
-            undefinedScore,
-          ) / totalChannelsInBlock / block.width / block.height,
-        )
+        const score = scoreCallback(channels, block) / totalChannelsInBlock /
+          block.width / block.height
 
         pixelIds.forEach((p) => {
           if (p !== undefined) {
