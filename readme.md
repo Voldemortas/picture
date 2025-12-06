@@ -271,7 +271,28 @@ const c = Picture.merge2(a, b, 1, 1)
 
 #### createBlockSimilarityMask
 
-_**TODO**_ - MISSING DESCRIPTION, BAD DEV :/
+The method divides the picture into `block`-sized chunks and iterates each chunk
+and creates a new picture with the alpha channels only on how each chunk was
+similar to the `block`.
+
+```ts
+const C = [0, 255, 255]
+const R = [255, 0, 0]
+//<! -- deno-fmt-ignore-start -->
+const bigData = [
+  R, R, C, R, R,
+  R, R, C, R, R,
+  C, C, C, C, C,
+  R, R, C, R, R,
+  R, R, C, R, R,
+]
+const cross = new Picture(5, 5, new Uint8ClampedArray(bigData.flat()))
+const block = new Picture(2, 1, new Uint8ClampedArray([R, R].flat()))
+const mask = cross.createBlockSimilarityMask(block)
+```
+
+![](example/block.png)\
+Result of `cross.createBlockSimilarityMask(block)`
 
 ---
 

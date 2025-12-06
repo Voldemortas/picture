@@ -39,6 +39,24 @@ type RGB_IMAGE = {
   data: Uint8ClampedArray
   channels: 3
 }
+/**
+ * does some manipulation on score
+ * @callback postScoreCallback
+ * @param {number} score
+ * @returns {number} updated score
+ */
+/**
+ * Options for createBlockSimilarityMask
+ * @typedef {Object} blockSimilarityBlockOptions
+ * @property {AlphaOption=} alpha
+ * @property {number=} undefinedScore
+ * @property {postScoreCallback=} postScoreCallback
+ */
+type blockSimilarityBlockOptions = {
+  alpha?: AlphaOption
+  undefinedScore?: number
+  postScoreCallback?: (score: number) => number
+}
 
 /**
  * My custom wrapper to do various pixel oriented operations
@@ -326,21 +344,47 @@ export default class Picture {
   }
 
   /**
-   * Creates a new Image with the dimensions of the 1st image.
-   * The new image has rgb channels all being [0, 0, 0], the difference is in the alpha channel
-   * 0 - fully transparent = the images are equal; 225 - images are completely different
+   * The method divides the picture into `block`-sized chunks and iterates each chunk
+   * and creates a new picture with the alpha channels only on how each chunk was
+   * similar to the `block`.
    *
-   * @param {Picture} block - a rectangle, that will be repeatedly (assuming it's smaller than the image) put onto image
-   *  and compared against the region it's being put on
+   * @param {Picture} block - a rectangle, that will be repeatedly (assuming it's smaller than the image) put onto the
+   * picture and compared against the region it's being put on
    * @param {number} offsetX
    * @param {number} offsetY
+   * @param {blockSimilarityBlockOptions} options
+   * @returns Picture with the dimensions of the 1st image.
+   * The new image has rgb channels all being [0, 0, 0], the difference is in the alpha channel
+   * 0 - fully transparent = the images are equal; 225 - images are completely different
+   * @example
+   * ```
+   * const C = [0, 255, 255]
+   * const R = [255, 0, 0]
+   * const bigData = [
+   *   R, R, C, R, R,
+   *   R, R, C, R, R,
+   *   C, C, C, C, C,
+   *   R, R, C, R, R,
+   *   R, R, C, R, R,
+   * ]
+   * const cross = new Picture(5, 5, new Uint8ClampedArray(bigData.flat()))
+   * const block = new Picture(2, 1, new Uint8ClampedArray([R, R].flat()))
+   * const mask = cross.createBlockSimilarityMask(block)
+   * ```
    */
   public createBlockSimilarityMask(
     block: Picture,
     offsetX: number = 0,
     offsetY: number = 0,
+    options: blockSimilarityBlockOptions = {},
   ): Picture {
-    return Picture.createBlockSimilarityMask(this, block, offsetX, offsetY)
+    return Picture.createBlockSimilarityMask(
+      this,
+      block,
+      offsetX,
+      offsetY,
+      options,
+    )
   }
   ////////////STATIC////////////
 
@@ -434,7 +478,7 @@ export default class Picture {
     for (let i = 1; i < colorSpaceRatios.length + 1; i++) {
       ranges.push(
         ranges[i - 1] +
-          (MAX_PIXEL + 1) / ratiosSum * colorSpaceRatios[i - 1],
+        (MAX_PIXEL + 1) / ratiosSum * colorSpaceRatios[i - 1],
       )
     }
     ranges[0] = 0
@@ -720,21 +764,47 @@ export default class Picture {
   }
 
   /**
-   * Creates a new Image with the dimensions of the 1st image.
+   * The method divides the picture into `block`-sized chunks and iterates each chunk
+   * and creates a new picture with the alpha channels only on how each chunk was
+   * similar to the `block`.
+   *
+   * @param {Picture} main - the picture to iterate over
+   * @param {Picture} block - a rectangle, that will be repeatedly (assuming it's smaller than the image) put onto the
+   *  and compared against the region it's being put on
+   * @param {number} offsetX
+   * @param {number} offsetY
+   * @param {blockSimilarityBlockOptions} options
+   * @returns Picture with the dimensions of the 1st image.
    * The new image has rgb channels all being [0, 0, 0], the difference is in the alpha channel
    * 0 - fully transparent = the images are equal; 225 - images are completely different
-   *
-   * @param main
-   * @param block
-   * @param offsetX
-   * @param offsetY
+   * @example
+   * ```
+   * const C = [0, 255, 255]
+   * const R = [255, 0, 0]
+   * const bigData = [
+   *   R, R, C, R, R,
+   *   R, R, C, R, R,
+   *   C, C, C, C, C,
+   *   R, R, C, R, R,
+   *   R, R, C, R, R,
+   * ]
+   * const cross = new Picture(5, 5, new Uint8ClampedArray(bigData.flat()))
+   * const block = new Picture(2, 1, new Uint8ClampedArray([R, R].flat()))
+   * const mask = Picture.createBlockSimilarityMask(cross, block)
+   * ```
    */
   public static createBlockSimilarityMask(
     main: Picture,
     block: Picture,
     offsetX: number = 0,
     offsetY: number = 0,
+    options: blockSimilarityBlockOptions = {},
   ): Picture {
+    const {
+      alpha = AlphaOption.multiply,
+      undefinedScore,
+      postScoreCallback = (score) => score,
+    } = options
     if (
       offsetX < 0 || offsetX > block.width || offsetY < 0 ||
       offsetY > block.height
@@ -747,6 +817,7 @@ export default class Picture {
         block,
         realXoffset,
         realYoffset,
+        { alpha, undefinedScore, postScoreCallback },
       )
     }
     const black = new Array(NO_ALPHA_CHANNELS).fill(0) as number[]
@@ -783,11 +854,14 @@ export default class Picture {
             }
           }
         }
-        const score = Comparator.compareMultiplePixels(
-          channels,
-          block.data,
-          AlphaOption.multiply,
-        ) / totalChannelsInBlock / block.width / block.height
+        const score = postScoreCallback(
+          Comparator.compareMultiplePixels(
+            channels,
+            block.data,
+            alpha,
+            undefinedScore,
+          ) / totalChannelsInBlock / block.width / block.height,
+        )
 
         pixelIds.forEach((p) => {
           if (p !== undefined) {

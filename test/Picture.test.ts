@@ -515,18 +515,22 @@ describe('Picture', () => {
       ]
       //<! -- deno-fmt-ignore-start -->
       const expectedResult = [
-        [0, 0, 3, 3, 4],
-        [0, 0, 3, 3, 4],
-        [4, 4, 4, 4, 4],
-        [0, 0, 3, 3, 4],
-        [0, 0, 3, 3, 4],
+        [4, 4, 1, 1, 0],
+        [4, 4, 1, 1, 0],
+        [0, 0, 0, 0, 0],
+        [4, 4, 1, 1, 0],
+        [4, 4, 1, 1, 0],
       ].flat().map(x => Math.round(x / 4 * 255))
 
       const smallData = [R, R]
       const cross = new Picture(5, 5, new Uint8ClampedArray(bigData.flat()))
       const block = new Picture(2, 1, new Uint8ClampedArray(smallData.flat()))
 
-      const mask = [...cross.createBlockSimilarityMask(block).data.values()]
+      const mask = [
+        ...cross.createBlockSimilarityMask(block, 0, 0, {
+          postScoreCallback: (score) => 255 - score,
+        }).data.values(),
+      ]
         .filter((_v, i) => i % CHANNELS === NO_ALPHA_CHANNELS)
       expect(mask).toEqual(expectedResult)
     })
